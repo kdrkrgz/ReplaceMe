@@ -166,6 +166,9 @@ final class SettingsViewController: NSViewController {
         textView.autoresizingMask = [.width]
         textView.textContainerInset = NSSize(width: 4, height: 4)
         textView.delegate = self
+        // Cmd+F ile inline find bar — NSTextFinder dispatch'i mainMenu üzerinden gelir
+        textView.usesFindBar = true
+        textView.isIncrementalSearchingEnabled = true
 
         scrollView.documentView = textView
     }
@@ -179,6 +182,10 @@ final class SettingsViewController: NSViewController {
 
             letterTextView.string = rulesAsText(letterRules)
             wordTextView.string   = rulesAsText(wordRules)
+
+            // Son eklenen kuralı görmek için her iki text view'ı en alta kaydır
+            letterTextView.scrollToEndOfDocument(nil)
+            wordTextView.scrollToEndOfDocument(nil)
         }
     }
 
@@ -215,9 +222,10 @@ final class SettingsViewController: NSViewController {
         Task {
             guard let rules = await CSVService.importRules() else { return }
             await DictionaryStore.shared.replaceAllWordRules(rules)
-            // Reload text view
+            // Reload text view ve en alta kaydır
             let updated = await DictionaryStore.shared.allWordRules()
             wordTextView.string = rulesAsText(updated)
+            wordTextView.scrollToEndOfDocument(nil)
             log.info("Imported \(rules.count) word rules via CSV")
         }
     }

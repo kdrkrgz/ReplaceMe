@@ -87,6 +87,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
         editMenu.addItem(.separator())
         editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenu.addItem(.separator())
+        // Find — NSTextFinder tag-based dispatch (usesFindBar = true ile inline bar açılır)
+        let findItem = NSMenuItem(title: "Find…",
+                                   action: #selector(NSTextView.performFindPanelAction(_:)),
+                                   keyEquivalent: "f")
+        findItem.tag = NSTextFinder.Action.showFindInterface.rawValue
+        editMenu.addItem(findItem)
+        let findNextItem = NSMenuItem(title: "Find Next",
+                                      action: #selector(NSTextView.performFindPanelAction(_:)),
+                                      keyEquivalent: "g")
+        findNextItem.tag = NSTextFinder.Action.nextMatch.rawValue
+        editMenu.addItem(findNextItem)
+        let findPrevItem = NSMenuItem(title: "Find Previous",
+                                      action: #selector(NSTextView.performFindPanelAction(_:)),
+                                      keyEquivalent: "G")  // Cmd+Shift+G
+        findPrevItem.tag = NSTextFinder.Action.previousMatch.rawValue
+        editMenu.addItem(findPrevItem)
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 
