@@ -141,7 +141,6 @@ final class StatusBarController: NSObject {
             settingsWindowController = SettingsWindowController()
         }
         settingsWindowController?.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func settingsDidChange() {

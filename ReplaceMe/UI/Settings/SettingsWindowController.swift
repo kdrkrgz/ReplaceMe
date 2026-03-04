@@ -1,9 +1,12 @@
 // SettingsWindowController.swift — NSWindowController wrapper
 
 import AppKit
+import OSLog
+
+private let log = Logger(subsystem: "com.kadirkaragoz.ReplaceMe", category: "SettingsWindow")
 
 @MainActor
-final class SettingsWindowController: NSWindowController {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     convenience init() {
         let window = NSWindow(
@@ -18,15 +21,32 @@ final class SettingsWindowController: NSWindowController {
 
         self.init(window: window)
         self.contentViewController = SettingsViewController()
+        window.delegate = self
     }
 
     override func showWindow(_ sender: Any?) {
+        // LSUIElement / .accessory uygulamalar window server'da düzgün keyboard focus alamaz.
+        // Settings açıkken .regular'a geçip uygulamayı aktive ediyoruz,
+        // böylece Cmd+C, Cmd+A gibi kısayollar NSTextView'a ulaşır.
+        NSApp.setActivationPolicy(.regular)
+
         super.showWindow(sender)
-        // NSTextView'ın Cmd+A, Cmd+C vb. kısayolları alabilmesi için
-        // pencerenin key olması ve text view'ın first responder olması gerekir.
         window?.makeKeyAndOrderFront(sender)
+        NSApp.activate(ignoringOtherApps: true)
+
         if let vc = contentViewController as? SettingsViewController {
             window?.makeFirstResponder(vc.firstEditableView)
+        }
+        log.debug("Settings window shown with .regular activation policy")
+    }
+
+    // MARK: - NSWindowDelegate
+
+    nonisolated func windowWillClose(_ notification: Notification) {
+        Task { @MainActor in
+            // Settings kapandığında tekrar .accessory'ye dön — Dock ikonu kaybolur
+            NSApp.setActivationPolicy(.accessory)
+            log.debug("Settings window closed — reverted to .accessory activation policy")
         }
     }
 }
