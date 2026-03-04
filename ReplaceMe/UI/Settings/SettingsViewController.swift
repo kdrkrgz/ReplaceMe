@@ -241,11 +241,18 @@ final class SettingsViewController: NSViewController {
         let isOn = sender.state == .on
         SettingsStore.shared.isLetterCaseInsensitive = isOn
         if isOn {
-            // CI açıldığında sub-seçenekleri otomatik aç
+            // CI açıldığında her ikisini de otomatik aç
             SettingsStore.shared.isLetterCapitalReplace = true
             SettingsStore.shared.isLetterUppercaseReplace = true
             letterCapitalCheckbox.state = .on
             letterUppercaseCheckbox.state = .on
+        } else {
+            // CI kapatıldığında her ikisini de otomatik kapat
+            // CI=ON geçerli tek hal her ikisinin de açık olmasını gerektirir
+            SettingsStore.shared.isLetterCapitalReplace = false
+            SettingsStore.shared.isLetterUppercaseReplace = false
+            letterCapitalCheckbox.state = .off
+            letterUppercaseCheckbox.state = .off
         }
         log.info("Letter CI: \(isOn)")
     }
@@ -286,6 +293,12 @@ final class SettingsViewController: NSViewController {
             SettingsStore.shared.isWordUppercaseReplace = true
             wordCapitalCheckbox.state = .on
             wordUppercaseCheckbox.state = .on
+        } else {
+            // CI kapatıldığında her ikisini de otomatik kapat
+            SettingsStore.shared.isWordCapitalReplace = false
+            SettingsStore.shared.isWordUppercaseReplace = false
+            wordCapitalCheckbox.state = .off
+            wordUppercaseCheckbox.state = .off
         }
         log.info("Word CI: \(isOn)")
     }
