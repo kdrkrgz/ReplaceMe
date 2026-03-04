@@ -71,7 +71,11 @@ enum CaseMapper {
         guard !replacement.isEmpty else { return replacement }
         let pattern = detect(original)
         switch pattern {
-        case .allLowercase, .mixed:
+        case .allLowercase:
+            // Normalize to lowercase — guards against raw values with incorrect casing
+            // (e.g. ciWordRules collision picking a title-case stored value).
+            return apply(pattern: .allLowercase, to: replacement)
+        case .mixed:
             return replacement
         case .titleCase:
             return capitalActive ? apply(pattern: .titleCase, to: replacement) : replacement

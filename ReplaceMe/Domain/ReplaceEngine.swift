@@ -93,20 +93,28 @@ private final class SynchronousReplaceState {
                                 return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
                             }
                         } else {
-                            // Exact match (covers lowercase input)
-                            if let replacement = snapshot.wordRules[word] {
-                                return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
-                            }
-                            // Sub-options: Capital/Uppercase active → CI lookup for matching case patterns only
+                            // CI=OFF: detect input pattern and gate by active sub-options.
+                            // Prevents title-case/uppercase matches when the corresponding
+                            // sub-option is off — even if an explicit rule exists for that form.
                             let pattern = CaseMapper.detect(word)
-                            let needTransform = (pattern == .titleCase && wordCap) ||
-                                                (pattern == .allUppercase && wordUpper)
-                            if needTransform {
+                            let allowed: Bool
+                            switch pattern {
+                            case .allLowercase, .mixed: allowed = true
+                            case .titleCase:             allowed = wordCap
+                            case .allUppercase:          allowed = wordUpper
+                            }
+                            if allowed {
+                                // Prefer CI lookup → uses canonical base rule; handles
+                                // lowercase exact match and case-variant matching in one path.
                                 let key = word.lowercased()
                                 if let raw = snapshot.ciWordRules[key] {
                                     let replacement = CaseMapper.applyCase(of: word, to: raw,
                                                                            capitalActive: wordCap,
                                                                            uppercaseActive: wordUpper)
+                                    return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                                }
+                                // Fallback: exact match (standalone case-specific rules)
+                                if let replacement = snapshot.wordRules[word] {
                                     return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
                                 }
                             }
@@ -203,18 +211,21 @@ actor ReplaceEngine {
                             return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw, capitalActive: wordCap, uppercaseActive: wordUpper), terminator: character)
                         }
                     } else {
-                        // Exact match (covers lowercase input)
-                        if let replacement = snapshot.wordRules[word] {
-                            return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
-                        }
-                        // Sub-options: Capital/Uppercase active → CI lookup for matching case patterns only
+                        // CI=OFF: detect input pattern and gate by active sub-options.
                         let pattern = CaseMapper.detect(word)
-                        let needTransform = (pattern == .titleCase && wordCap) ||
-                                            (pattern == .allUppercase && wordUpper)
-                        if needTransform {
+                        let allowed: Bool
+                        switch pattern {
+                        case .allLowercase, .mixed: allowed = true
+                        case .titleCase:             allowed = wordCap
+                        case .allUppercase:          allowed = wordUpper
+                        }
+                        if allowed {
                             let key = word.lowercased()
                             if let raw = snapshot.ciWordRules[key] {
                                 return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw, capitalActive: wordCap, uppercaseActive: wordUpper), terminator: character)
+                            }
+                            if let replacement = snapshot.wordRules[word] {
+                                return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
                             }
                         }
                     }

@@ -194,4 +194,40 @@ final class ReplaceEngineWordCaseTests: XCTestCase {
         let titleAction = await typeWord("Sukur", engine: engine)
         XCTAssertEqual(titleAction, .passthrough)
     }
+
+    // MARK: - Regression: Bug 1 — CI=ON, lowercase input must produce lowercase output
+    //         even when ciWordRules collision left a title-case raw value
+
+    func testFullCI_lowercase_yieldsLowercase_whenRawIsCapitalized() async {
+        // Simulates the CSV scenario: "Yuz,Yüz" rule means ciWordRules["yuz"] might be "Yüz".
+        // Engine must still produce "yüz" for lowercase "yuz" input.
+        let engine = await makeEngine(wordRules: ["Yuz": "Yüz"],  // only title-case rule
+                                      wordCI: true, wordCap: true, wordUpper: true)
+        let action = await typeWord("yuz", engine: engine)
+        if case .replaceWord(_, let insert, _) = action {
+            XCTAssertEqual(insert, "yüz", "Lowercase input must always produce lowercase output")
+        } else { XCTFail("Expected replaceWord") }
+    }
+
+    // MARK: - Regression: Bug 3 — Upper=ON only must NOT replace title-case form
+    //         even when an explicit "Yuz,Yüz" rule exists in wordRules
+
+    func testUppercaseOnly_titleCase_notReplacedEvenWithExplicitRule() async {
+        // Simulates having both "yuz,yüz" and "Yuz,Yüz" rules (e.g. from CSV import).
+        // With Upper=ON and Cap=OFF, "Yuz" must NOT be replaced.
+        let engine = await makeEngine(wordRules: ["yuz": "yüz", "Yuz": "Yüz"],
+                                      wordCI: false, wordCap: false, wordUpper: true)
+        let action = await typeWord("Yuz", engine: engine)
+        XCTAssertEqual(action, .passthrough,
+                       "Title-case form must be blocked when Capital=OFF, regardless of explicit rules")
+    }
+
+    func testCapitalOnly_uppercase_notReplacedEvenWithExplicitRule() async {
+        // With Cap=ON and Upper=OFF, "YUZ" must NOT be replaced.
+        let engine = await makeEngine(wordRules: ["yuz": "yüz", "YUZ": "YÜZ"],
+                                      wordCI: false, wordCap: true, wordUpper: false)
+        let action = await typeWord("YUZ", engine: engine)
+        XCTAssertEqual(action, .passthrough,
+                       "Uppercase form must be blocked when Uppercase=OFF, regardless of explicit rules")
+    }
 }

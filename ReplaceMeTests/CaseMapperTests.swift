@@ -76,4 +76,45 @@ final class CaseMapperTests: XCTestCase {
         let result = CaseMapper.applyCase(of: "GOZUM", to: "gözüm")
         XCTAssertEqual(result, "GÖZÜM")
     }
+
+    // MARK: - Filtered applyCase — allLowercase normalization (Bug 1 regression)
+
+    func testFilteredApplyCase_lowercase_input_normalizes_capitalRaw() {
+        // If ciWordRules collision leaves a title-case raw value, lowercase input must still
+        // produce lowercase output (not propagate the stale capital).
+        let result = CaseMapper.applyCase(of: "yuz", to: "Yüz",
+                                          capitalActive: true, uppercaseActive: true)
+        XCTAssertEqual(result, "yüz")
+    }
+
+    func testFilteredApplyCase_lowercase_input_normalizes_uppercaseRaw() {
+        let result = CaseMapper.applyCase(of: "yuz", to: "YÜZ",
+                                          capitalActive: true, uppercaseActive: true)
+        XCTAssertEqual(result, "yüz")
+    }
+
+    func testFilteredApplyCase_titleCase_input_capitalActive() {
+        let result = CaseMapper.applyCase(of: "Yuz", to: "yüz",
+                                          capitalActive: true, uppercaseActive: false)
+        XCTAssertEqual(result, "Yüz")
+    }
+
+    func testFilteredApplyCase_uppercase_input_uppercaseActive() {
+        let result = CaseMapper.applyCase(of: "YUZ", to: "yüz",
+                                          capitalActive: false, uppercaseActive: true)
+        XCTAssertEqual(result, "YÜZ")
+    }
+
+    func testFilteredApplyCase_titleCase_capitalOff_returnsRaw() {
+        // Cap=OFF → title-case input must return replacement as-is (no transform)
+        let result = CaseMapper.applyCase(of: "Yuz", to: "yüz",
+                                          capitalActive: false, uppercaseActive: true)
+        XCTAssertEqual(result, "yüz")
+    }
+
+    func testFilteredApplyCase_uppercase_uppercaseOff_returnsRaw() {
+        let result = CaseMapper.applyCase(of: "YUZ", to: "yüz",
+                                          capitalActive: true, uppercaseActive: false)
+        XCTAssertEqual(result, "yüz")
+    }
 }
