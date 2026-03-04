@@ -14,6 +14,14 @@ final class SettingsViewController: NSViewController {
     private let letterScrollView  = NSScrollView()
     private let letterTextView   = NSTextView()
     private let letterCICheckbox = NSButton(checkboxWithTitle: "Case Insensitive", target: nil, action: nil)
+    private let letterWarningLabel: NSTextField = {
+        let label = NSTextField(labelWithString: "")
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = NSFont.systemFont(ofSize: 11)
+        label.textColor = NSColor.systemOrange
+        label.isHidden = true
+        return label
+    }()
 
     private let wordLabel        = NSTextField(labelWithString: "Word Replace (format: from,to — one per line)")
     private let wordScrollView    = NSScrollView()
@@ -56,6 +64,7 @@ final class SettingsViewController: NSViewController {
         letterCICheckbox.action = #selector(letterCIChanged)
         letterCICheckbox.state = SettingsStore.shared.isLetterCaseInsensitive ? .on : .off
         view.addSubview(letterCICheckbox)
+        view.addSubview(letterWarningLabel)
 
         // Word section
         wordLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -106,6 +115,11 @@ final class SettingsViewController: NSViewController {
             // Letter CI checkbox
             letterCICheckbox.topAnchor.constraint(equalTo: letterScrollView.bottomAnchor, constant: 6),
             letterCICheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+
+            // Letter validation warning — same row as CI checkbox, trailing
+            letterWarningLabel.centerYAnchor.constraint(equalTo: letterCICheckbox.centerYAnchor),
+            letterWarningLabel.leadingAnchor.constraint(equalTo: letterCICheckbox.trailingAnchor, constant: 12),
+            letterWarningLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -16),
 
             // Word label
             wordLabel.topAnchor.constraint(equalTo: letterCICheckbox.bottomAnchor, constant: 14),
@@ -187,8 +201,8 @@ final class SettingsViewController: NSViewController {
     }
 
     @objc private func saveRules() {
-        let letterRules = parseText(letterTextView.string)
-        let wordRules   = parseText(wordTextView.string)
+        let (letterRules, _) = parseLetterRules(letterTextView.string)
+        let wordRules         = parseText(wordTextView.string)
 
         Task {
             await DictionaryStore.shared.replaceAllLetterRules(letterRules)
@@ -217,6 +231,25 @@ final class SettingsViewController: NSViewController {
 
     // MARK: - Parse
 
+    /// Letter rules: from ve to alanları tam olarak 1 Unicode karakter olmalı.
+    /// Geçersiz satırlar atlanır; dönen `invalidCount` ile uyarı label güncellenir.
+    private func parseLetterRules(_ text: String) -> (valid: [String: String], invalidCount: Int) {
+        var result: [String: String] = [:]
+        var invalidCount = 0
+        let lines = text.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            let parts = trimmed.split(separator: ",", maxSplits: 1).map { String($0) }
+            guard parts.count == 2 else { invalidCount += 1; continue }
+            let from = parts[0], to = parts[1]
+            guard from.count == 1 && to.count == 1 else { invalidCount += 1; continue }
+            result[from] = to
+        }
+        return (result, invalidCount)
+    }
+
+    /// Word rules: from ve to uzunluk kısıtlaması yok.
     private func parseText(_ text: String) -> [String: String] {
         var result: [String: String] = [:]
         let lines = text.components(separatedBy: .newlines)
@@ -229,6 +262,17 @@ final class SettingsViewController: NSViewController {
         }
         return result
     }
+
+    /// Letter text view değiştiğinde geçersiz satır sayısını anlık göster.
+    private func updateLetterValidation() {
+        let (_, invalidCount) = parseLetterRules(letterTextView.string)
+        if invalidCount > 0 {
+            letterWarningLabel.stringValue = "⚠ \(invalidCount) geçersiz satır atlandı (her alan 1 karakter olmalı)"
+            letterWarningLabel.isHidden = false
+        } else {
+            letterWarningLabel.isHidden = true
+        }
+    }
 }
 
 // MARK: - NSTextViewDelegate (auto-save debounce)
@@ -236,6 +280,10 @@ final class SettingsViewController: NSViewController {
 extension SettingsViewController: NSTextViewDelegate {
     nonisolated func textDidChange(_ notification: Notification) {
         Task { @MainActor in
+            // Letter text view değişiyorsa anlık validasyon göster
+            if (notification.object as? NSTextView) === self.letterTextView {
+                self.updateLetterValidation()
+            }
             self.saveDebounceTask?.cancel()
             self.saveDebounceTask = Task {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
