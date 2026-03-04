@@ -19,4 +19,14 @@ final class SettingsWindowController: NSWindowController {
         self.init(window: window)
         self.contentViewController = SettingsViewController()
     }
+
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        // NSTextView'ın Cmd+A, Cmd+C vb. kısayolları alabilmesi için
+        // pencerenin key olması ve text view'ın first responder olması gerekir.
+        window?.makeKeyAndOrderFront(sender)
+        if let vc = contentViewController as? SettingsViewController {
+            window?.makeFirstResponder(vc.firstEditableView)
+        }
+    }
 }

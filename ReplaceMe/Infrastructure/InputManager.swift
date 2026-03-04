@@ -170,7 +170,10 @@ final class InputManager {
         }
 
         // 4. Kendi uygulamamız öndeyse bypass — Settings penceresi gibi
-        if settings.isOwnAppFocusedCached {
+        // NSApp.isActive: tap main run loop'ta çalıştığı için main thread güvenli.
+        // isOwnAppFocusedCached cache'e ek olarak NSApp.isActive direkt kontrolü
+        // LSUIElement uygulamalarda NSWorkspace notification'ın gelmediği durumları da yakalar.
+        if NSApp.isActive || settings.isOwnAppFocusedCached {
             return Unmanaged.passRetained(event)
         }
 

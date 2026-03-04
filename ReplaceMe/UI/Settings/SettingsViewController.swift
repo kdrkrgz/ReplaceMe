@@ -26,6 +26,9 @@ final class SettingsViewController: NSViewController {
 
     private var saveDebounceTask: Task<Void, Never>?
 
+    /// İlk odaklanılacak view — SettingsWindowController tarafından first responder yapılır.
+    var firstEditableView: NSView { letterTextView }
+
     // MARK: - Lifecycle
 
     override func loadView() {
