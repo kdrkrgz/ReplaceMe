@@ -10,6 +10,7 @@ final class StatusBarController: NSObject {
 
     private let statusItem: NSStatusItem
     private var settingsWindowController: SettingsWindowController?
+    private var hotkeyRecorderWindowController: HotkeyRecorderWindowController?
     private let settings = SettingsStore.shared
 
     override init() {
@@ -55,7 +56,7 @@ final class StatusBarController: NSObject {
         menu.addItem(letterItem)
 
         // Letter Replace CI checkbox (indented title ile görsel ayrım)
-        let letterCIItem = NSMenuItem(title: "  ↳ Case Insensitive", action: #selector(toggleLetterCI), keyEquivalent: "")
+        let letterCIItem = NSMenuItem(title: "  Case Insensitive", action: #selector(toggleLetterCI), keyEquivalent: "")
         letterCIItem.target = self
         letterCIItem.tag = 103
         menu.addItem(letterCIItem)
@@ -69,7 +70,7 @@ final class StatusBarController: NSObject {
         menu.addItem(wordItem)
 
         // Word Replace CI checkbox
-        let wordCIItem = NSMenuItem(title: "  ↳ Case Insensitive", action: #selector(toggleWordCI), keyEquivalent: "")
+        let wordCIItem = NSMenuItem(title: "  Case Insensitive", action: #selector(toggleWordCI), keyEquivalent: "")
         wordCIItem.target = self
         wordCIItem.tag = 104
         menu.addItem(wordCIItem)
@@ -77,6 +78,11 @@ final class StatusBarController: NSObject {
         menu.addItem(.separator())
 
         // Settings
+        let shortcutItem = NSMenuItem(title: "Activate Shortcut...", action: #selector(openShortcutRecorder), keyEquivalent: "")
+        shortcutItem.target = self
+        shortcutItem.tag = 105
+        menu.addItem(shortcutItem)
+
         menu.addItem(NSMenuItem(title: "Open Settings...", action: #selector(openSettings), keyEquivalent: ",").then {
             $0.target = self
         })
@@ -143,6 +149,13 @@ final class StatusBarController: NSObject {
         settingsWindowController?.showWindow(nil)
     }
 
+    @objc private func openShortcutRecorder() {
+        if hotkeyRecorderWindowController == nil {
+            hotkeyRecorderWindowController = HotkeyRecorderWindowController()
+        }
+        hotkeyRecorderWindowController?.show()
+    }
+
     @objc private func settingsDidChange() {
         updateIcon()
         updateMenuState()
@@ -168,6 +181,14 @@ final class StatusBarController: NSObject {
         }
         if let wordCIItem = menu.item(withTag: 104) {
             wordCIItem.state = settings.isWordCaseInsensitive ? .on : .off
+        }
+        // Update "Activate Shortcut" title to reflect current shortcut
+        if let shortcutItem = menu.item(withTag: 105) {
+            if let combo = settings.activationShortcut {
+                shortcutItem.title = "Activate Shortcut: \(combo.displayString)"
+            } else {
+                shortcutItem.title = "Activate Shortcut..."
+            }
         }
     }
 }

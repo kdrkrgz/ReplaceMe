@@ -21,6 +21,7 @@ final class SettingsStore: ObservableObject {
         static let isLetterUppercaseReplace    = "isLetterUppercaseReplace"
         static let isWordCapitalReplace        = "isWordCapitalReplace"
         static let isWordUppercaseReplace      = "isWordUppercaseReplace"
+        static let activationShortcut          = "activationShortcut"
     }
 
     // MARK: - Published (UI binding)
@@ -88,6 +89,20 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    /// Global activation/deactivation keyboard shortcut.
+    /// nil = no shortcut configured.
+    @Published var activationShortcut: HotkeyCombo? {
+        didSet {
+            if let combo = activationShortcut {
+                let data = try? JSONEncoder().encode(combo)
+                UserDefaults.standard.set(data, forKey: Keys.activationShortcut)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Keys.activationShortcut)
+            }
+            activationShortcutCached = activationShortcut
+        }
+    }
+
     // MARK: - Thread-safe cached values (CGEventTap callback için)
 
     private(set) var isGlobalActiveCached: Bool
@@ -99,6 +114,8 @@ final class SettingsStore: ObservableObject {
     private(set) var isLetterUppercaseReplaceCached: Bool
     private(set) var isWordCapitalReplaceCached: Bool
     private(set) var isWordUppercaseReplaceCached: Bool
+    /// CGEventTap'ten okunabilir — global activation shortcut cache.
+    private(set) var activationShortcutCached: HotkeyCombo?
     /// CGEventTap callback'ten güvenle okunabilir — own-app bypass için
     var isOwnAppFocusedCached: Bool = false
     /// Letter rules textview odakta iken true — letter replace bypass'ı için.
@@ -130,6 +147,10 @@ final class SettingsStore: ObservableObject {
         isWordCapitalReplace        = wordCap
         isWordUppercaseReplace      = wordUpper
 
+        let shortcut = defaults.data(forKey: Keys.activationShortcut)
+            .flatMap { try? JSONDecoder().decode(HotkeyCombo.self, from: $0) }
+        activationShortcut = shortcut
+
         isGlobalActiveCached            = global
         isLetterReplaceActiveCached     = letter
         isWordReplaceActiveCached       = word
@@ -139,5 +160,6 @@ final class SettingsStore: ObservableObject {
         isLetterUppercaseReplaceCached  = letterUpper
         isWordCapitalReplaceCached      = wordCap
         isWordUppercaseReplaceCached    = wordUpper
+        activationShortcutCached        = shortcut
     }
 }

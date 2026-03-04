@@ -158,6 +158,22 @@ final class InputManager {
             return Unmanaged.passRetained(event)
         }
 
+        // 1.5. Global activation shortcut — check BEFORE modifier bypass (step 3)
+        // Shortcut uses modifier keys, so it must be checked here.
+        if let combo = settings.activationShortcutCached {
+            let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+            let eventMods = NSEvent.ModifierFlags(rawValue: UInt(event.flags.rawValue))
+                .intersection([.command, .option, .shift, .control])
+            if eventKeyCode == combo.keyCode && eventMods.rawValue == combo.modifiers {
+                settings.isGlobalActive.toggle()
+                if !settings.isGlobalActive {
+                    Task { await ReplaceEngine.shared.clearBuffer() }
+                }
+                NotificationCenter.default.post(name: .rmSettingsChanged, object: nil)
+                return nil // consume event
+            }
+        }
+
         // 2. Global motor pasif mi? → bypass
         guard settings.isGlobalActiveCached else {
             return Unmanaged.passRetained(event)
