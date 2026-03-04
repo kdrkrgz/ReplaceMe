@@ -169,11 +169,10 @@ final class InputManager {
             return Unmanaged.passRetained(event)
         }
 
-        // 4. Kendi uygulamamız öndeyse bypass — Settings penceresi gibi
-        // NSApp.isActive: tap main run loop'ta çalıştığı için main thread güvenli.
-        // isOwnAppFocusedCached cache'e ek olarak NSApp.isActive direkt kontrolü
-        // LSUIElement uygulamalarda NSWorkspace notification'ın gelmediği durumları da yakalar.
-        if NSApp.isActive || settings.isOwnAppFocusedCached {
+        // 4. Letter rules textview odakta ise bypass — kendi letter replace'i kuralı bozmayı önle.
+        // Word textview veya başka bir alan odaktaysa replace çalışır (kullanıcı duplicate görebilir).
+        // NSApp.isActive genel bypass'ı KALDIRILDI: modifier guard (step 3) kısayolları zaten korur.
+        if settings.isEditingLetterRulesCached {
             return Unmanaged.passRetained(event)
         }
 

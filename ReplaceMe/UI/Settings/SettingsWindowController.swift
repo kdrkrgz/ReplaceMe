@@ -45,8 +45,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     nonisolated func windowWillClose(_ notification: Notification) {
         Task { @MainActor in
             // Settings kapandığında tekrar .accessory'ye dön — Dock ikonu kaybolur
+            SettingsStore.shared.isEditingLetterRulesCached = false
             NSApp.setActivationPolicy(.accessory)
             log.debug("Settings window closed — reverted to .accessory activation policy")
+        }
+    }
+
+    nonisolated func windowDidResignKey(_ notification: Notification) {
+        // Settings penceresi arka plana geçtiğinde letter bypass flag'ini sıfırla
+        Task { @MainActor in
+            SettingsStore.shared.isEditingLetterRulesCached = false
         }
     }
 }

@@ -275,9 +275,18 @@ final class SettingsViewController: NSViewController {
     }
 }
 
-// MARK: - NSTextViewDelegate (auto-save debounce)
+// MARK: - NSTextViewDelegate (auto-save debounce + letter validation)
 
 extension SettingsViewController: NSTextViewDelegate {
+    nonisolated func textViewDidChangeSelection(_ notification: Notification) {
+        // Letter textview odaklandığında letter replace bypass'ını aç,
+        // word textview veya başka bir alan odaklandığında kapat.
+        Task { @MainActor in
+            let isLetter = (notification.object as? NSTextView) === self.letterTextView
+            SettingsStore.shared.isEditingLetterRulesCached = isLetter
+        }
+    }
+
     nonisolated func textDidChange(_ notification: Notification) {
         Task { @MainActor in
             // Letter text view değişiyorsa anlık validasyon göster

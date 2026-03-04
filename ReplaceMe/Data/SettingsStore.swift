@@ -65,6 +65,9 @@ final class SettingsStore: ObservableObject {
     private(set) var isWordCaseInsensitiveCached: Bool
     /// CGEventTap callback'ten güvenle okunabilir — own-app bypass için
     var isOwnAppFocusedCached: Bool = false
+    /// Letter rules textview odakta iken true — letter replace bypass'ı için.
+    /// Word replace her zaman çalışır; sadece letter textview'da letter replace bypass edilir.
+    var isEditingLetterRulesCached: Bool = false
 
     // MARK: - Init
 
