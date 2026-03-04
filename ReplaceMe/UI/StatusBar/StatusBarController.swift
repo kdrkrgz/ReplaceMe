@@ -38,21 +38,33 @@ final class StatusBarController: NSObject {
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
+    // MARK: - Menu Icon Helper
+
+    /// Returns a 13pt SF Symbol template image for use in NSMenuItem.
+    /// Template images automatically adapt to dark/light menu appearance.
+    private func menuIcon(_ symbolName: String) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+        return NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+    }
+
     private func setupMenu() {
         let menu = NSMenu()
 
-        // Active toggle
+        // Active toggle — power icon conveys on/off semantics
         let activeItem = NSMenuItem(title: "Active", action: #selector(toggleGlobal), keyEquivalent: "")
         activeItem.target = self
         activeItem.tag = 100
+        activeItem.image = menuIcon("power")
         menu.addItem(activeItem)
 
         menu.addItem(.separator())
 
-        // Letter Replace checkbox
+        // Letter Replace — "character" icon represents single-character level replacement
         let letterItem = NSMenuItem(title: "Letter Replace Active", action: #selector(toggleLetterReplace), keyEquivalent: "")
         letterItem.target = self
         letterItem.tag = 102
+        letterItem.image = menuIcon("character")
         menu.addItem(letterItem)
 
         // Letter Replace CI checkbox (indented title ile görsel ayrım)
@@ -63,10 +75,11 @@ final class StatusBarController: NSObject {
 
         menu.addItem(.separator())
 
-        // Word Replace checkbox
+        // Word Replace — "text.word.spacing" icon represents word-level replacement
         let wordItem = NSMenuItem(title: "Word Replace Active", action: #selector(toggleWordReplace), keyEquivalent: "")
         wordItem.target = self
         wordItem.tag = 101
+        wordItem.image = menuIcon("text.word.spacing")
         menu.addItem(wordItem)
 
         // Word Replace CI checkbox
@@ -77,10 +90,11 @@ final class StatusBarController: NSObject {
 
         menu.addItem(.separator())
 
-        // Settings
+        // Activate Shortcut — "command" icon represents keyboard shortcuts
         let shortcutItem = NSMenuItem(title: "Activate Shortcut...", action: #selector(openShortcutRecorder), keyEquivalent: "")
         shortcutItem.target = self
         shortcutItem.tag = 105
+        shortcutItem.image = menuIcon("command")
         menu.addItem(shortcutItem)
 
         menu.addItem(NSMenuItem(title: "Open Settings...", action: #selector(openSettings), keyEquivalent: ",").then {
