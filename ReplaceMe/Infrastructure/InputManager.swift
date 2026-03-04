@@ -143,13 +143,24 @@ final class InputManager {
             return Unmanaged.passRetained(event)
         }
 
-        // 3. Karakteri extract et
+        // 3. Modifier tuşlar (Cmd/Ctrl/Option) varsa bypass — kısayolları koru
+        let flags = event.flags
+        if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
+            return Unmanaged.passRetained(event)
+        }
+
+        // 4. Kendi uygulamamız öndeyse bypass — Settings penceresi gibi
+        if settings.isOwnAppFocusedCached {
+            return Unmanaged.passRetained(event)
+        }
+
+        // 5. Karakteri extract et
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         guard let character = event.rmCharacter else {
             return Unmanaged.passRetained(event)
         }
 
-        // 4. ReplaceEngine'den senkron action al (cached snapshot — async yok)
+        // 6. ReplaceEngine'den senkron action al (cached snapshot — async yok)
         let action = engine.processSynchronous(character: character, keyCode: keyCode)
 
         switch action {

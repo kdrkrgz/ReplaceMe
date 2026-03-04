@@ -28,9 +28,13 @@ final class FocusChangeMonitor {
     }
 
     @objc private func activeAppChanged(_ notification: Notification) {
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let frontPID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+        let isOwn = frontPID == ownPID
+        SettingsStore.shared.isOwnAppFocusedCached = isOwn
         Task {
             await ReplaceEngine.shared.clearBuffer()
-            log.debug("WordBuffer cleared on app focus change")
+            log.debug("WordBuffer cleared on app focus change (ownApp=\(isOwn))")
         }
     }
 }

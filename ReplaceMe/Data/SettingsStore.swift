@@ -63,6 +63,8 @@ final class SettingsStore: ObservableObject {
     private(set) var isWordReplaceActiveCached: Bool
     private(set) var isLetterCaseInsensitiveCached: Bool
     private(set) var isWordCaseInsensitiveCached: Bool
+    /// CGEventTap callback'ten güvenle okunabilir — own-app bypass için
+    var isOwnAppFocusedCached: Bool = false
 
     // MARK: - Init
 
