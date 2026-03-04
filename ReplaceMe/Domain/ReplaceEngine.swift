@@ -84,6 +84,7 @@ private final class SynchronousReplaceState {
                     let word = buffer.flush()
                     if !word.isEmpty {
                         if wordCI {
+                            // Full CI: match any case form via lowercased key, apply transform per pattern
                             let key = word.lowercased()
                             if let raw = snapshot.ciWordRules[key] {
                                 let replacement = CaseMapper.applyCase(of: word, to: raw,
@@ -92,8 +93,22 @@ private final class SynchronousReplaceState {
                                 return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
                             }
                         } else {
+                            // Exact match (covers lowercase input)
                             if let replacement = snapshot.wordRules[word] {
                                 return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                            }
+                            // Sub-options: Capital/Uppercase active → CI lookup for matching case patterns only
+                            let pattern = CaseMapper.detect(word)
+                            let needTransform = (pattern == .titleCase && wordCap) ||
+                                                (pattern == .allUppercase && wordUpper)
+                            if needTransform {
+                                let key = word.lowercased()
+                                if let raw = snapshot.ciWordRules[key] {
+                                    let replacement = CaseMapper.applyCase(of: word, to: raw,
+                                                                           capitalActive: wordCap,
+                                                                           uppercaseActive: wordUpper)
+                                    return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                                }
                             }
                         }
                     }
@@ -182,13 +197,25 @@ actor ReplaceEngine {
                 let word = wordBuffer.flush()
                 if !word.isEmpty {
                     if wordCI {
+                        // Full CI: match any case form via lowercased key, apply transform per pattern
                         let key = word.lowercased()
                         if let raw = snapshot.ciWordRules[key] {
                             return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw, capitalActive: wordCap, uppercaseActive: wordUpper), terminator: character)
                         }
                     } else {
+                        // Exact match (covers lowercase input)
                         if let replacement = snapshot.wordRules[word] {
                             return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                        }
+                        // Sub-options: Capital/Uppercase active → CI lookup for matching case patterns only
+                        let pattern = CaseMapper.detect(word)
+                        let needTransform = (pattern == .titleCase && wordCap) ||
+                                            (pattern == .allUppercase && wordUpper)
+                        if needTransform {
+                            let key = word.lowercased()
+                            if let raw = snapshot.ciWordRules[key] {
+                                return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw, capitalActive: wordCap, uppercaseActive: wordUpper), terminator: character)
+                            }
                         }
                     }
                 }

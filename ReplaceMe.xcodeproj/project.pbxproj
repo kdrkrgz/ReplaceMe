@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		FBD4700A2F587F9B0053CE3F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FBD461FA2F587F9B0053CE3F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FBD462012F587F9B0053CE3F;
+			remoteInfo = ReplaceMe;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		FBD462022F587F9B0053CE3F /* ReplaceMe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReplaceMe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBD470012F587F9B0053CE3F /* ReplaceMeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReplaceMeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -61,24 +71,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
-
-/* Begin PBXContainerItemProxy section */
-		FBD4700A2F587F9B0053CE3F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FBD461FA2F587F9B0053CE3F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = FBD462012F587F9B0053CE3F;
-			remoteInfo = ReplaceMe;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		FBD4700B2F587F9B0053CE3F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = FBD462012F587F9B0053CE3F /* ReplaceMe */;
-			targetProxy = FBD4700A2F587F9B0053CE3F /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXNativeTarget section */
 		FBD462012F587F9B0053CE3F /* ReplaceMe */ = {
@@ -196,6 +188,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FBD4700B2F587F9B0053CE3F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FBD462012F587F9B0053CE3F /* ReplaceMe */;
+			targetProxy = FBD4700A2F587F9B0053CE3F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		FBD4620B2F587F9D0053CE3F /* Debug */ = {
