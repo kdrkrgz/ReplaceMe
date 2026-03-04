@@ -14,6 +14,8 @@ final class SettingsViewController: NSViewController {
     private let letterScrollView  = NSScrollView()
     private let letterTextView   = NSTextView()
     private let letterCICheckbox = NSButton(checkboxWithTitle: "Case Insensitive", target: nil, action: nil)
+    private let letterCapitalCheckbox  = NSButton(checkboxWithTitle: "Capital Replace Active",  target: nil, action: nil)
+    private let letterUppercaseCheckbox = NSButton(checkboxWithTitle: "Uppercase Replace Active", target: nil, action: nil)
     private let letterWarningLabel: NSTextField = {
         let label = NSTextField(labelWithString: "")
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -27,6 +29,8 @@ final class SettingsViewController: NSViewController {
     private let wordScrollView    = NSScrollView()
     private let wordTextView     = NSTextView()
     private let wordCICheckbox   = NSButton(checkboxWithTitle: "Case Insensitive", target: nil, action: nil)
+    private let wordCapitalCheckbox    = NSButton(checkboxWithTitle: "Capital Replace Active",  target: nil, action: nil)
+    private let wordUppercaseCheckbox  = NSButton(checkboxWithTitle: "Uppercase Replace Active", target: nil, action: nil)
 
     private let importButton     = NSButton(title: "Import CSV", target: nil, action: nil)
     private let exportButton     = NSButton(title: "Export CSV", target: nil, action: nil)
@@ -40,7 +44,7 @@ final class SettingsViewController: NSViewController {
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 540))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 620))
     }
 
     override func viewDidLoad() {
@@ -66,6 +70,18 @@ final class SettingsViewController: NSViewController {
         view.addSubview(letterCICheckbox)
         view.addSubview(letterWarningLabel)
 
+        letterCapitalCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        letterCapitalCheckbox.target = self
+        letterCapitalCheckbox.action = #selector(letterCapitalChanged)
+        letterCapitalCheckbox.state = SettingsStore.shared.isLetterCapitalReplace ? .on : .off
+        view.addSubview(letterCapitalCheckbox)
+
+        letterUppercaseCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        letterUppercaseCheckbox.target = self
+        letterUppercaseCheckbox.action = #selector(letterUppercaseChanged)
+        letterUppercaseCheckbox.state = SettingsStore.shared.isLetterUppercaseReplace ? .on : .off
+        view.addSubview(letterUppercaseCheckbox)
+
         // Word section
         wordLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(wordLabel)
@@ -78,6 +94,18 @@ final class SettingsViewController: NSViewController {
         wordCICheckbox.action = #selector(wordCIChanged)
         wordCICheckbox.state = SettingsStore.shared.isWordCaseInsensitive ? .on : .off
         view.addSubview(wordCICheckbox)
+
+        wordCapitalCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        wordCapitalCheckbox.target = self
+        wordCapitalCheckbox.action = #selector(wordCapitalChanged)
+        wordCapitalCheckbox.state = SettingsStore.shared.isWordCapitalReplace ? .on : .off
+        view.addSubview(wordCapitalCheckbox)
+
+        wordUppercaseCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        wordUppercaseCheckbox.target = self
+        wordUppercaseCheckbox.action = #selector(wordUppercaseChanged)
+        wordUppercaseCheckbox.state = SettingsStore.shared.isWordUppercaseReplace ? .on : .off
+        view.addSubview(wordUppercaseCheckbox)
 
         // Buttons
         importButton.bezelStyle = .rounded
@@ -106,11 +134,11 @@ final class SettingsViewController: NSViewController {
             letterLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             letterLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
 
-            // Letter scroll
+            // Letter scroll — fixed height
             letterScrollView.topAnchor.constraint(equalTo: letterLabel.bottomAnchor, constant: 6),
             letterScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             letterScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            letterScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.27),
+            letterScrollView.heightAnchor.constraint(equalToConstant: 140),
 
             // Letter CI checkbox
             letterCICheckbox.topAnchor.constraint(equalTo: letterScrollView.bottomAnchor, constant: 6),
@@ -121,31 +149,43 @@ final class SettingsViewController: NSViewController {
             letterWarningLabel.leadingAnchor.constraint(equalTo: letterCICheckbox.trailingAnchor, constant: 12),
             letterWarningLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -16),
 
+            // Letter sub-checkboxes — indented, side by side
+            letterCapitalCheckbox.topAnchor.constraint(equalTo: letterCICheckbox.bottomAnchor, constant: 4),
+            letterCapitalCheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 36),
+            letterUppercaseCheckbox.centerYAnchor.constraint(equalTo: letterCapitalCheckbox.centerYAnchor),
+            letterUppercaseCheckbox.leadingAnchor.constraint(equalTo: letterCapitalCheckbox.trailingAnchor, constant: 16),
+
             // Word label
-            wordLabel.topAnchor.constraint(equalTo: letterCICheckbox.bottomAnchor, constant: 14),
+            wordLabel.topAnchor.constraint(equalTo: letterCapitalCheckbox.bottomAnchor, constant: 10),
             wordLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             wordLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
 
-            // Word scroll
+            // Word scroll — fixed height
             wordScrollView.topAnchor.constraint(equalTo: wordLabel.bottomAnchor, constant: 6),
             wordScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             wordScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            wordScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.27),
+            wordScrollView.heightAnchor.constraint(equalToConstant: 140),
 
             // Word CI checkbox
             wordCICheckbox.topAnchor.constraint(equalTo: wordScrollView.bottomAnchor, constant: 6),
             wordCICheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
 
+            // Word sub-checkboxes — indented, side by side
+            wordCapitalCheckbox.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 4),
+            wordCapitalCheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 36),
+            wordUppercaseCheckbox.centerYAnchor.constraint(equalTo: wordCapitalCheckbox.centerYAnchor),
+            wordUppercaseCheckbox.leadingAnchor.constraint(equalTo: wordCapitalCheckbox.trailingAnchor, constant: 16),
+
             // Import button
-            importButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
+            importButton.topAnchor.constraint(equalTo: wordCapitalCheckbox.bottomAnchor, constant: 14),
             importButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
 
             // Export button
-            exportButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
+            exportButton.topAnchor.constraint(equalTo: wordCapitalCheckbox.bottomAnchor, constant: 14),
             exportButton.leadingAnchor.constraint(equalTo: importButton.trailingAnchor, constant: 8),
 
             // Save button
-            saveButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
+            saveButton.topAnchor.constraint(equalTo: wordCapitalCheckbox.bottomAnchor, constant: 14),
             saveButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             saveButton.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -16),
         ])
@@ -198,13 +238,80 @@ final class SettingsViewController: NSViewController {
     // MARK: - Actions
 
     @objc private func letterCIChanged(_ sender: NSButton) {
-        SettingsStore.shared.isLetterCaseInsensitive = sender.state == .on
-        log.info("Letter CI: \(sender.state == .on)")
+        let isOn = sender.state == .on
+        SettingsStore.shared.isLetterCaseInsensitive = isOn
+        if isOn {
+            // CI açıldığında sub-seçenekleri otomatik aç
+            SettingsStore.shared.isLetterCapitalReplace = true
+            SettingsStore.shared.isLetterUppercaseReplace = true
+            letterCapitalCheckbox.state = .on
+            letterUppercaseCheckbox.state = .on
+        }
+        log.info("Letter CI: \(isOn)")
+    }
+
+    @objc private func letterCapitalChanged(_ sender: NSButton) {
+        let isOn = sender.state == .on
+        SettingsStore.shared.isLetterCapitalReplace = isOn
+        if isOn && SettingsStore.shared.isLetterUppercaseReplace {
+            // Her ikisi de açık → CI'yi otomatik aç
+            SettingsStore.shared.isLetterCaseInsensitive = true
+            letterCICheckbox.state = .on
+        } else if !isOn {
+            // Capital kapandı → CI kapat
+            SettingsStore.shared.isLetterCaseInsensitive = false
+            letterCICheckbox.state = .off
+        }
+    }
+
+    @objc private func letterUppercaseChanged(_ sender: NSButton) {
+        let isOn = sender.state == .on
+        SettingsStore.shared.isLetterUppercaseReplace = isOn
+        if isOn && SettingsStore.shared.isLetterCapitalReplace {
+            // Her ikisi de açık → CI'yi otomatik aç
+            SettingsStore.shared.isLetterCaseInsensitive = true
+            letterCICheckbox.state = .on
+        } else if !isOn {
+            // Uppercase kapandı → CI kapat
+            SettingsStore.shared.isLetterCaseInsensitive = false
+            letterCICheckbox.state = .off
+        }
     }
 
     @objc private func wordCIChanged(_ sender: NSButton) {
-        SettingsStore.shared.isWordCaseInsensitive = sender.state == .on
-        log.info("Word CI: \(sender.state == .on)")
+        let isOn = sender.state == .on
+        SettingsStore.shared.isWordCaseInsensitive = isOn
+        if isOn {
+            SettingsStore.shared.isWordCapitalReplace = true
+            SettingsStore.shared.isWordUppercaseReplace = true
+            wordCapitalCheckbox.state = .on
+            wordUppercaseCheckbox.state = .on
+        }
+        log.info("Word CI: \(isOn)")
+    }
+
+    @objc private func wordCapitalChanged(_ sender: NSButton) {
+        let isOn = sender.state == .on
+        SettingsStore.shared.isWordCapitalReplace = isOn
+        if isOn && SettingsStore.shared.isWordUppercaseReplace {
+            SettingsStore.shared.isWordCaseInsensitive = true
+            wordCICheckbox.state = .on
+        } else if !isOn {
+            SettingsStore.shared.isWordCaseInsensitive = false
+            wordCICheckbox.state = .off
+        }
+    }
+
+    @objc private func wordUppercaseChanged(_ sender: NSButton) {
+        let isOn = sender.state == .on
+        SettingsStore.shared.isWordUppercaseReplace = isOn
+        if isOn && SettingsStore.shared.isWordCapitalReplace {
+            SettingsStore.shared.isWordCaseInsensitive = true
+            wordCICheckbox.state = .on
+        } else if !isOn {
+            SettingsStore.shared.isWordCaseInsensitive = false
+            wordCICheckbox.state = .off
+        }
     }
 
     @objc private func saveRules() {

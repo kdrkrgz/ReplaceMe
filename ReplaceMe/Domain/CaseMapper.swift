@@ -63,6 +63,30 @@ enum CaseMapper {
         }
     }
 
+    /// Filtered applyCase — CI aktifken sadece seçili case pattern'ları transform eder.
+    /// capitalActive=false → title-case input için replacement olduğu gibi döner.
+    /// uppercaseActive=false → ALL-CAPS input için replacement olduğu gibi döner.
+    static func applyCase(of original: String, to replacement: String,
+                           capitalActive: Bool, uppercaseActive: Bool) -> String {
+        guard !replacement.isEmpty else { return replacement }
+        let pattern = detect(original)
+        switch pattern {
+        case .allLowercase, .mixed:
+            return replacement
+        case .titleCase:
+            return capitalActive ? apply(pattern: .titleCase, to: replacement) : replacement
+        case .allUppercase:
+            return uppercaseActive ? apply(pattern: .allUppercase, to: replacement) : replacement
+        }
+    }
+
+    /// Karakter varyantı — letter replace CI path için.
+    static func applyCase(of original: Character, to replacement: String,
+                           capitalActive: Bool, uppercaseActive: Bool) -> String {
+        applyCase(of: String(original), to: replacement,
+                  capitalActive: capitalActive, uppercaseActive: uppercaseActive)
+    }
+
     /// Kısayol: original string'den pattern'ı oku, replacement'a uygula.
     /// - Parameters:
     ///   - original: Kullanıcının yazdığı kelime/karakter (orijinal case).

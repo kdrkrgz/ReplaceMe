@@ -17,6 +17,10 @@ final class SettingsStore: ObservableObject {
         static let isWordReplaceActive         = "isWordReplaceActive"
         static let isLetterCaseInsensitive     = "isLetterCaseInsensitive"
         static let isWordCaseInsensitive       = "isWordCaseInsensitive"
+        static let isLetterCapitalReplace      = "isLetterCapitalReplace"
+        static let isLetterUppercaseReplace    = "isLetterUppercaseReplace"
+        static let isWordCapitalReplace        = "isWordCapitalReplace"
+        static let isWordUppercaseReplace      = "isWordUppercaseReplace"
     }
 
     // MARK: - Published (UI binding)
@@ -56,6 +60,34 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var isLetterCapitalReplace: Bool {
+        didSet {
+            UserDefaults.standard.set(isLetterCapitalReplace, forKey: Keys.isLetterCapitalReplace)
+            isLetterCapitalReplaceCached = isLetterCapitalReplace
+        }
+    }
+
+    @Published var isLetterUppercaseReplace: Bool {
+        didSet {
+            UserDefaults.standard.set(isLetterUppercaseReplace, forKey: Keys.isLetterUppercaseReplace)
+            isLetterUppercaseReplaceCached = isLetterUppercaseReplace
+        }
+    }
+
+    @Published var isWordCapitalReplace: Bool {
+        didSet {
+            UserDefaults.standard.set(isWordCapitalReplace, forKey: Keys.isWordCapitalReplace)
+            isWordCapitalReplaceCached = isWordCapitalReplace
+        }
+    }
+
+    @Published var isWordUppercaseReplace: Bool {
+        didSet {
+            UserDefaults.standard.set(isWordUppercaseReplace, forKey: Keys.isWordUppercaseReplace)
+            isWordUppercaseReplaceCached = isWordUppercaseReplace
+        }
+    }
+
     // MARK: - Thread-safe cached values (CGEventTap callback için)
 
     private(set) var isGlobalActiveCached: Bool
@@ -63,6 +95,10 @@ final class SettingsStore: ObservableObject {
     private(set) var isWordReplaceActiveCached: Bool
     private(set) var isLetterCaseInsensitiveCached: Bool
     private(set) var isWordCaseInsensitiveCached: Bool
+    private(set) var isLetterCapitalReplaceCached: Bool
+    private(set) var isLetterUppercaseReplaceCached: Bool
+    private(set) var isWordCapitalReplaceCached: Bool
+    private(set) var isWordUppercaseReplaceCached: Bool
     /// CGEventTap callback'ten güvenle okunabilir — own-app bypass için
     var isOwnAppFocusedCached: Bool = false
     /// Letter rules textview odakta iken true — letter replace bypass'ı için.
@@ -72,24 +108,36 @@ final class SettingsStore: ObservableObject {
     // MARK: - Init
 
     private init() {
-        // Varsayılan: her şey aktif, CI kapalı
+        // Varsayılan: her şey aktif, CI ve sub-seçenekler kapalı
         let defaults = UserDefaults.standard
-        let global    = defaults.object(forKey: Keys.isGlobalActive)            .flatMap { $0 as? Bool } ?? true
-        let letter    = defaults.object(forKey: Keys.isLetterReplaceActive)     .flatMap { $0 as? Bool } ?? true
-        let word      = defaults.object(forKey: Keys.isWordReplaceActive)       .flatMap { $0 as? Bool } ?? true
-        let letterCI  = defaults.object(forKey: Keys.isLetterCaseInsensitive)   .flatMap { $0 as? Bool } ?? false
-        let wordCI    = defaults.object(forKey: Keys.isWordCaseInsensitive)     .flatMap { $0 as? Bool } ?? false
+        let global        = defaults.object(forKey: Keys.isGlobalActive)            .flatMap { $0 as? Bool } ?? true
+        let letter        = defaults.object(forKey: Keys.isLetterReplaceActive)     .flatMap { $0 as? Bool } ?? true
+        let word          = defaults.object(forKey: Keys.isWordReplaceActive)       .flatMap { $0 as? Bool } ?? true
+        let letterCI      = defaults.object(forKey: Keys.isLetterCaseInsensitive)   .flatMap { $0 as? Bool } ?? false
+        let wordCI        = defaults.object(forKey: Keys.isWordCaseInsensitive)     .flatMap { $0 as? Bool } ?? false
+        let letterCap     = defaults.object(forKey: Keys.isLetterCapitalReplace)    .flatMap { $0 as? Bool } ?? false
+        let letterUpper   = defaults.object(forKey: Keys.isLetterUppercaseReplace)  .flatMap { $0 as? Bool } ?? false
+        let wordCap       = defaults.object(forKey: Keys.isWordCapitalReplace)      .flatMap { $0 as? Bool } ?? false
+        let wordUpper     = defaults.object(forKey: Keys.isWordUppercaseReplace)    .flatMap { $0 as? Bool } ?? false
 
         isGlobalActive              = global
         isLetterReplaceActive       = letter
         isWordReplaceActive         = word
         isLetterCaseInsensitive     = letterCI
         isWordCaseInsensitive       = wordCI
+        isLetterCapitalReplace      = letterCap
+        isLetterUppercaseReplace    = letterUpper
+        isWordCapitalReplace        = wordCap
+        isWordUppercaseReplace      = wordUpper
 
         isGlobalActiveCached            = global
         isLetterReplaceActiveCached     = letter
         isWordReplaceActiveCached       = word
         isLetterCaseInsensitiveCached   = letterCI
         isWordCaseInsensitiveCached     = wordCI
+        isLetterCapitalReplaceCached    = letterCap
+        isLetterUppercaseReplaceCached  = letterUpper
+        isWordCapitalReplaceCached      = wordCap
+        isWordUppercaseReplaceCached    = wordUpper
     }
 }

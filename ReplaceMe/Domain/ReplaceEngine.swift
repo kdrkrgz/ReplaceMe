@@ -35,6 +35,10 @@ private final class SynchronousReplaceState {
             let wordActive   = SettingsStore.shared.isWordReplaceActiveCached
             let letterCI     = SettingsStore.shared.isLetterCaseInsensitiveCached
             let wordCI       = SettingsStore.shared.isWordCaseInsensitiveCached
+            let letterCap    = SettingsStore.shared.isLetterCapitalReplaceCached
+            let letterUpper  = SettingsStore.shared.isLetterUppercaseReplaceCached
+            let wordCap      = SettingsStore.shared.isWordCapitalReplaceCached
+            let wordUpper    = SettingsStore.shared.isWordUppercaseReplaceCached
 
             // Escape → temizle
             if keyCode == KeyCode.escape {
@@ -59,10 +63,12 @@ private final class SynchronousReplaceState {
             if letterActive {
                 let charStr = String(character)
                 if letterCI {
-                    // Case-insensitive: lowercase key ile bak, ardından case uygula
+                    // Case-insensitive: lowercase key ile bak, ardından seçili case pattern'ı uygula
                     let key = charStr.lowercased()
                     if let raw = snapshot.ciLetterRules[key] {
-                        let replacement = CaseMapper.applyCase(of: character, to: raw)
+                        let replacement = CaseMapper.applyCase(of: character, to: raw,
+                                                               capitalActive: letterCap,
+                                                               uppercaseActive: letterUpper)
                         return .replaceCharacter(replacement)
                     }
                 } else {
@@ -80,7 +86,9 @@ private final class SynchronousReplaceState {
                         if wordCI {
                             let key = word.lowercased()
                             if let raw = snapshot.ciWordRules[key] {
-                                let replacement = CaseMapper.applyCase(of: word, to: raw)
+                                let replacement = CaseMapper.applyCase(of: word, to: raw,
+                                                                       capitalActive: wordCap,
+                                                                       uppercaseActive: wordUpper)
                                 return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
                             }
                         } else {
@@ -132,6 +140,10 @@ actor ReplaceEngine {
         let wordActive   = settings.isWordReplaceActiveCached
         let letterCI     = settings.isLetterCaseInsensitiveCached
         let wordCI       = settings.isWordCaseInsensitiveCached
+        let letterCap    = settings.isLetterCapitalReplaceCached
+        let letterUpper  = settings.isLetterUppercaseReplaceCached
+        let wordCap      = settings.isWordCapitalReplaceCached
+        let wordUpper    = settings.isWordUppercaseReplaceCached
 
         if keyCode == KeyCode.escape {
             wordBuffer.clear()
@@ -154,7 +166,9 @@ actor ReplaceEngine {
             if letterCI {
                 let key = charStr.lowercased()
                 if let raw = snapshot.ciLetterRules[key] {
-                    return .replaceCharacter(CaseMapper.applyCase(of: character, to: raw))
+                    return .replaceCharacter(CaseMapper.applyCase(of: character, to: raw,
+                                                                   capitalActive: letterCap,
+                                                                   uppercaseActive: letterUpper))
                 }
             } else {
                 if let replacement = snapshot.letterRules[charStr] {
@@ -170,7 +184,7 @@ actor ReplaceEngine {
                     if wordCI {
                         let key = word.lowercased()
                         if let raw = snapshot.ciWordRules[key] {
-                            return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw), terminator: character)
+                            return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw, capitalActive: wordCap, uppercaseActive: wordUpper), terminator: character)
                         }
                     } else {
                         if let replacement = snapshot.wordRules[word] {
