@@ -89,15 +89,12 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Global activation/deactivation keyboard shortcut.
-    /// nil = no shortcut configured.
-    @Published var activationShortcut: HotkeyCombo? {
+    /// Global activation/deactivation keyboard shortcut sequence (empty = not configured).
+    /// Supports 1–3 sequential strokes (e.g. ⌘K then ⌘S).
+    @Published var activationShortcut: [HotkeyCombo] {
         didSet {
-            if let combo = activationShortcut {
-                let data = try? JSONEncoder().encode(combo)
+            if let data = try? JSONEncoder().encode(activationShortcut) {
                 UserDefaults.standard.set(data, forKey: Keys.activationShortcut)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.activationShortcut)
             }
             activationShortcutCached = activationShortcut
         }
@@ -115,7 +112,7 @@ final class SettingsStore: ObservableObject {
     private(set) var isWordCapitalReplaceCached: Bool
     private(set) var isWordUppercaseReplaceCached: Bool
     /// CGEventTap'ten okunabilir — global activation shortcut cache.
-    private(set) var activationShortcutCached: HotkeyCombo?
+    private(set) var activationShortcutCached: [HotkeyCombo]
     /// CGEventTap callback'ten güvenle okunabilir — own-app bypass için
     var isOwnAppFocusedCached: Bool = false
     /// Letter rules textview odakta iken true — letter replace bypass'ı için.
@@ -147,8 +144,19 @@ final class SettingsStore: ObservableObject {
         isWordCapitalReplace        = wordCap
         isWordUppercaseReplace      = wordUpper
 
-        let shortcut = defaults.data(forKey: Keys.activationShortcut)
-            .flatMap { try? JSONDecoder().decode(HotkeyCombo.self, from: $0) }
+        let shortcut: [HotkeyCombo]
+        if let data = defaults.data(forKey: Keys.activationShortcut) {
+            // Try new format ([HotkeyCombo]) first, fall back to old single-combo format
+            if let arr = try? JSONDecoder().decode([HotkeyCombo].self, from: data) {
+                shortcut = arr
+            } else if let single = try? JSONDecoder().decode(HotkeyCombo.self, from: data) {
+                shortcut = [single]  // migrate old single-combo storage
+            } else {
+                shortcut = []
+            }
+        } else {
+            shortcut = []
+        }
         activationShortcut = shortcut
 
         isGlobalActiveCached            = global

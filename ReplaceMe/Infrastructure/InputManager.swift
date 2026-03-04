@@ -29,6 +29,10 @@ final class InputManager {
     private let injector = EventInjector.shared
     private let settings = SettingsStore.shared
 
+    // Multi-stroke chord sequence tracking (main thread only — CGEventTap is on CFRunLoopGetMain)
+    private var pendingSequence: [HotkeyCombo] = []
+    private var sequenceResetTimer: Timer?
+
     private init() {}
 
     /// Engine'e hiç ulaşmaması gereken keycodes — ok tuşları, F-tuşları, medya tuşları, vb.
@@ -132,6 +136,17 @@ final class InputManager {
         }
     }
 
+    // MARK: - Sequence Reset Timer
+
+    /// Resets partial chord state after 1.5 s of inactivity.
+    /// Timer fires on main run loop — safe since CGEventTap is also on main run loop.
+    private func scheduleSequenceReset() {
+        sequenceResetTimer?.invalidate()
+        sequenceResetTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
+            self?.pendingSequence = []
+        }
+    }
+
     // MARK: - Internal callback entry (called from C callback)
 
     fileprivate func handleEvent(
@@ -158,19 +173,40 @@ final class InputManager {
             return Unmanaged.passRetained(event)
         }
 
-        // 1.5. Global activation shortcut — check BEFORE modifier bypass (step 3)
-        // Shortcut uses modifier keys, so it must be checked here.
-        if let combo = settings.activationShortcutCached {
+        // 1.5. Global activation shortcut sequence — check BEFORE modifier bypass (step 3).
+        // Supports 1–3 sequential strokes. Partial-match strokes are consumed while waiting.
+        let activationSeq = settings.activationShortcutCached
+        if !activationSeq.isEmpty {
             let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
             let eventMods = NSEvent.ModifierFlags(rawValue: UInt(event.flags.rawValue))
                 .intersection([.command, .option, .shift, .control])
-            if eventKeyCode == combo.keyCode && eventMods.rawValue == combo.modifiers {
-                settings.isGlobalActive.toggle()
-                if !settings.isGlobalActive {
-                    Task { await ReplaceEngine.shared.clearBuffer() }
+            let stroke = HotkeyCombo(keyCode: eventKeyCode, modifiers: eventMods)
+
+            let nextIdx = pendingSequence.count  // index of next expected stroke
+            if nextIdx < activationSeq.count && stroke == activationSeq[nextIdx] {
+                pendingSequence.append(stroke)
+                scheduleSequenceReset()
+
+                if pendingSequence.count == activationSeq.count {
+                    // Full sequence matched — toggle activation
+                    pendingSequence = []
+                    sequenceResetTimer?.invalidate()
+                    settings.isGlobalActive.toggle()
+                    if !settings.isGlobalActive {
+                        Task { await ReplaceEngine.shared.clearBuffer() }
+                    }
+                    NotificationCenter.default.post(name: .rmSettingsChanged, object: nil)
                 }
-                NotificationCenter.default.post(name: .rmSettingsChanged, object: nil)
-                return nil // consume event
+                return nil  // consume both partial and complete match strokes
+            } else if !pendingSequence.isEmpty {
+                // Sequence broken — reset; check if this event starts a fresh sequence
+                pendingSequence = []
+                sequenceResetTimer?.invalidate()
+                if stroke == activationSeq[0] {
+                    pendingSequence = [stroke]
+                    scheduleSequenceReset()
+                    return nil
+                }
             }
         }
 

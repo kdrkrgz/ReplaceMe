@@ -196,12 +196,14 @@ final class StatusBarController: NSObject {
         if let wordCIItem = menu.item(withTag: 104) {
             wordCIItem.state = settings.isWordCaseInsensitive ? .on : .off
         }
-        // Update "Activate Shortcut" title to reflect current shortcut
+        // Update "Activate Shortcut" title to reflect current shortcut sequence
         if let shortcutItem = menu.item(withTag: 105) {
-            if let combo = settings.activationShortcut {
-                shortcutItem.title = "Activate Shortcut: \(combo.displayString)"
-            } else {
+            let seq = settings.activationShortcut
+            if seq.isEmpty {
                 shortcutItem.title = "Activate Shortcut..."
+            } else {
+                let display = seq.map { $0.displayString }.joined(separator: " → ")
+                shortcutItem.title = "Activate Shortcut: \(display)"
             }
         }
     }

@@ -9,12 +9,12 @@ private let log = Logger(subsystem: "com.kadirkaragoz.ReplaceMe", category: "Hot
 final class HotkeyRecorderViewController: NSViewController {
 
     // MARK: - State Machine
+    // Conflict is no longer a blocking state — handled via NSAlert confirmation.
 
     private enum RecorderState {
-        case idle(current: HotkeyCombo?)
-        case recording
-        case recorded(HotkeyCombo)
-        case conflict(HotkeyCombo, String)
+        case idle(current: [HotkeyCombo])
+        case recording(accumulated: [HotkeyCombo])  // partial strokes so far
+        case recorded([HotkeyCombo])                 // ready to save
     }
 
     private var state: RecorderState = .idle(current: SettingsStore.shared.activationShortcut)
@@ -24,16 +24,16 @@ final class HotkeyRecorderViewController: NSViewController {
 
     private let titleLabel       = NSTextField(labelWithString: "Global Activation Shortcut")
     private let descLabel        = NSTextField(wrappingLabelWithString:
-        "Set a keyboard shortcut to activate or deactivate ReplaceMe globally.")
+        "Set a keyboard shortcut (up to 3 strokes) to toggle ReplaceMe globally.")
     private let recorderButton   = NSButton()
-    private let conflictLabel    = NSTextField(labelWithString: "")
+    private let hintLabel        = NSTextField(labelWithString: "")
     private let clearButton      = NSButton(title: "Clear", target: nil, action: nil)
     private let saveButton       = NSButton(title: "Save", target: nil, action: nil)
 
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 220))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 230))
     }
 
     override func viewDidLoad() {
@@ -45,42 +45,35 @@ final class HotkeyRecorderViewController: NSViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        // Title
         titleLabel.font = .boldSystemFont(ofSize: 14)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(titleLabel)
 
-        // Description
         descLabel.font = .systemFont(ofSize: 12)
         descLabel.textColor = .secondaryLabelColor
         descLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(descLabel)
 
-        // Recorder button
         recorderButton.bezelStyle = .regularSquare
         recorderButton.isBordered = true
-        recorderButton.font = .monospacedSystemFont(ofSize: 22, weight: .regular)
+        recorderButton.font = .monospacedSystemFont(ofSize: 20, weight: .regular)
         recorderButton.translatesAutoresizingMaskIntoConstraints = false
         recorderButton.target = self
         recorderButton.action = #selector(recorderButtonClicked)
         view.addSubview(recorderButton)
 
-        // Conflict/info label
-        conflictLabel.font = .systemFont(ofSize: 11)
-        conflictLabel.textColor = .systemRed
-        conflictLabel.alignment = .center
-        conflictLabel.isHidden = true
-        conflictLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(conflictLabel)
+        hintLabel.font = .systemFont(ofSize: 11)
+        hintLabel.textColor = .secondaryLabelColor
+        hintLabel.alignment = .center
+        hintLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(hintLabel)
 
-        // Clear button
         clearButton.bezelStyle = .rounded
         clearButton.translatesAutoresizingMaskIntoConstraints = false
         clearButton.target = self
         clearButton.action = #selector(clearShortcut)
         view.addSubview(clearButton)
 
-        // Save button
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r"
         saveButton.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +81,6 @@ final class HotkeyRecorderViewController: NSViewController {
         saveButton.action = #selector(saveShortcut)
         view.addSubview(saveButton)
 
-        // Layout constraints
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 24),
             titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -99,12 +91,12 @@ final class HotkeyRecorderViewController: NSViewController {
 
             recorderButton.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 20),
             recorderButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            recorderButton.widthAnchor.constraint(equalToConstant: 240),
+            recorderButton.widthAnchor.constraint(equalToConstant: 280),
             recorderButton.heightAnchor.constraint(equalToConstant: 52),
 
-            conflictLabel.topAnchor.constraint(equalTo: recorderButton.bottomAnchor, constant: 8),
-            conflictLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            conflictLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            hintLabel.topAnchor.constraint(equalTo: recorderButton.bottomAnchor, constant: 8),
+            hintLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            hintLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
             clearButton.trailingAnchor.constraint(equalTo: saveButton.leadingAnchor, constant: -12),
             clearButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
@@ -121,66 +113,77 @@ final class HotkeyRecorderViewController: NSViewController {
     private func updateUI() {
         switch state {
         case .idle(let current):
-            if let combo = current {
-                recorderButton.title = combo.displayString
-                recorderButton.toolTip = "Click to change shortcut"
-            } else {
+            if current.isEmpty {
                 recorderButton.title = "Click to Record..."
-                recorderButton.toolTip = "Click to set a shortcut"
+                recorderButton.toolTip = "Click to set an activation shortcut"
+            } else {
+                recorderButton.title = sequenceDisplay(current)
+                recorderButton.toolTip = "Click to change shortcut"
             }
             recorderButton.contentTintColor = .labelColor
-            conflictLabel.isHidden = true
+            hintLabel.stringValue = "Press up to 3 key combinations in sequence."
             saveButton.isEnabled = false
-            saveButton.title = "Save"
 
-        case .recording:
-            recorderButton.title = "● Recording..."
+        case .recording(let accumulated):
+            if accumulated.isEmpty {
+                recorderButton.title = "● Recording..."
+            } else {
+                recorderButton.title = sequenceDisplay(accumulated) + " ●"
+            }
             recorderButton.contentTintColor = .systemOrange
-            conflictLabel.isHidden = true
+            let remaining = 3 - accumulated.count
+            if accumulated.isEmpty {
+                hintLabel.stringValue = "Press a key combo (with modifier). Esc to cancel."
+            } else {
+                hintLabel.stringValue = "\(accumulated.count)/3 recorded. Press \(remaining) more, or click button to finish."
+            }
             saveButton.isEnabled = false
-            saveButton.title = "Save"
 
-        case .recorded(let combo):
-            recorderButton.title = combo.displayString
+        case .recorded(let strokes):
+            recorderButton.title = sequenceDisplay(strokes)
             recorderButton.contentTintColor = .systemGreen
-            conflictLabel.isHidden = true
+            hintLabel.stringValue = "\(strokes.count) stroke\(strokes.count == 1 ? "" : "s") recorded. Click Save to apply."
             saveButton.isEnabled = true
-            saveButton.title = "Save"
-
-        case .conflict(let combo, let description):
-            recorderButton.title = combo.displayString
-            recorderButton.contentTintColor = .systemRed
-            conflictLabel.stringValue = "⚠️ Conflicts with: \(description)"
-            conflictLabel.isHidden = false
-            saveButton.isEnabled = false
-            saveButton.title = "Save"
         }
+    }
+
+    private func sequenceDisplay(_ strokes: [HotkeyCombo]) -> String {
+        strokes.map { $0.displayString }.joined(separator: " → ")
     }
 
     // MARK: - Actions
 
     @objc private func recorderButtonClicked() {
-        guard case .recording = state else {
+        switch state {
+        case .idle:
             startRecording()
-            return
+
+        case .recording(let accumulated):
+            stopRecording()
+            if accumulated.isEmpty {
+                state = .idle(current: SettingsStore.shared.activationShortcut)
+                updateUI()
+            } else {
+                finishRecording(strokes: accumulated)
+            }
+
+        case .recorded:
+            // Restart recording from scratch
+            startRecording()
         }
-        // Second click while recording = cancel
-        stopRecording()
-        state = .idle(current: SettingsStore.shared.activationShortcut)
-        updateUI()
     }
 
     @objc private func saveShortcut() {
-        guard case .recorded(let combo) = state else { return }
-        SettingsStore.shared.activationShortcut = combo
+        guard case .recorded(let strokes) = state else { return }
+        SettingsStore.shared.activationShortcut = strokes
         NotificationCenter.default.post(name: .rmSettingsChanged, object: nil)
-        log.info("Activation shortcut saved: \(combo.displayString)")
+        log.info("Activation shortcut saved: \(self.sequenceDisplay(strokes))")
         view.window?.close()
     }
 
     @objc private func clearShortcut() {
         stopRecording()
-        SettingsStore.shared.activationShortcut = nil
+        SettingsStore.shared.activationShortcut = []
         NotificationCenter.default.post(name: .rmSettingsChanged, object: nil)
         log.info("Activation shortcut cleared")
         view.window?.close()
@@ -189,12 +192,12 @@ final class HotkeyRecorderViewController: NSViewController {
     // MARK: - Recording
 
     private func startRecording() {
-        state = .recording
+        state = .recording(accumulated: [])
         updateUI()
 
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.handleRecordedKey(event)
-            return nil // consume event while recording
+            return nil // consume all keys while recording
         }
     }
 
@@ -206,8 +209,10 @@ final class HotkeyRecorderViewController: NSViewController {
     }
 
     private func handleRecordedKey(_ event: NSEvent) {
-        let keyCode    = event.keyCode
-        let modifiers  = event.modifierFlags.intersection([.command, .option, .shift, .control])
+        guard case .recording(var accumulated) = state else { return }
+
+        let keyCode   = event.keyCode
+        let modifiers = event.modifierFlags.intersection([.command, .option, .shift, .control])
 
         // Escape without modifiers → cancel recording
         if keyCode == 53 && modifiers.isEmpty {
@@ -217,20 +222,54 @@ final class HotkeyRecorderViewController: NSViewController {
             return
         }
 
-        // Require at least one modifier to avoid intercepting regular typing
-        guard !modifiers.isEmpty else {
-            return
-        }
+        // Each stroke must have at least one modifier key
+        guard !modifiers.isEmpty else { return }
 
-        let combo = HotkeyCombo(keyCode: keyCode, modifiers: modifiers)
-        stopRecording()
+        let stroke = HotkeyCombo(keyCode: keyCode, modifiers: modifiers)
+        accumulated.append(stroke)
 
-        if let conflict = SystemShortcutChecker.conflictDescription(for: combo) {
-            state = .conflict(combo, conflict)
-            log.warning("Hotkey conflict: \(combo.displayString) → \(conflict)")
+        if accumulated.count >= 3 {
+            stopRecording()
+            finishRecording(strokes: accumulated)
         } else {
-            state = .recorded(combo)
-            log.info("Hotkey recorded: \(combo.displayString)")
+            state = .recording(accumulated: accumulated)
+            updateUI()
+        }
+    }
+
+    /// Validates strokes for system conflicts and either saves or asks for confirmation.
+    private func finishRecording(strokes: [HotkeyCombo]) {
+        // Only check the first stroke; multi-stroke sequences are safe from system shortcuts.
+        if let firstStroke = strokes.first,
+           let conflict = SystemShortcutChecker.conflictDescription(for: firstStroke) {
+            log.warning("Conflict detected: \(self.sequenceDisplay(strokes)) → \(conflict)")
+            showConflictAlert(for: strokes, conflictDescription: conflict)
+        } else {
+            state = .recorded(strokes)
+            updateUI()
+        }
+    }
+
+    /// Shows an NSAlert asking the user whether to override the conflicting shortcut.
+    private func showConflictAlert(for strokes: [HotkeyCombo], conflictDescription: String) {
+        let alert = NSAlert()
+        alert.messageText = "System Shortcut Conflict"
+        alert.informativeText = """
+            "\(sequenceDisplay(strokes))" may conflict with the system shortcut "\(conflictDescription)".
+
+            Saving this shortcut may interfere with the system function. Do you want to use it anyway?
+            """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Use Anyway")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            state = .recorded(strokes)
+            log.info("User chose to override conflict: \(self.sequenceDisplay(strokes))")
+        } else {
+            // Back to idle — let user try a different shortcut
+            state = .idle(current: SettingsStore.shared.activationShortcut)
+            log.info("User cancelled conflicting shortcut")
         }
         updateUI()
     }
@@ -242,3 +281,4 @@ final class HotkeyRecorderViewController: NSViewController {
         stopRecording()
     }
 }
+
