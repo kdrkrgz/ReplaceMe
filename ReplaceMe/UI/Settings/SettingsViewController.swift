@@ -10,24 +10,26 @@ final class SettingsViewController: NSViewController {
 
     // MARK: - UI Elements
 
-    private let letterLabel     = NSTextField(labelWithString: "Letter Replace (format: from,to — one per line)")
-    private let letterScrollView = NSScrollView()
-    private let letterTextView  = NSTextView()
+    private let letterLabel      = NSTextField(labelWithString: "Letter Replace (format: from,to — one per line)")
+    private let letterScrollView  = NSScrollView()
+    private let letterTextView   = NSTextView()
+    private let letterCICheckbox = NSButton(checkboxWithTitle: "Case Insensitive", target: nil, action: nil)
 
-    private let wordLabel       = NSTextField(labelWithString: "Word Replace (format: from,to — one per line)")
-    private let wordScrollView  = NSScrollView()
-    private let wordTextView    = NSTextView()
+    private let wordLabel        = NSTextField(labelWithString: "Word Replace (format: from,to — one per line)")
+    private let wordScrollView    = NSScrollView()
+    private let wordTextView     = NSTextView()
+    private let wordCICheckbox   = NSButton(checkboxWithTitle: "Case Insensitive", target: nil, action: nil)
 
-    private let importButton    = NSButton(title: "Import CSV", target: nil, action: nil)
-    private let exportButton    = NSButton(title: "Export CSV", target: nil, action: nil)
-    private let saveButton      = NSButton(title: "Save", target: nil, action: nil)
+    private let importButton     = NSButton(title: "Import CSV", target: nil, action: nil)
+    private let exportButton     = NSButton(title: "Export CSV", target: nil, action: nil)
+    private let saveButton       = NSButton(title: "Save", target: nil, action: nil)
 
     private var saveDebounceTask: Task<Void, Never>?
 
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 480))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 540))
     }
 
     override func viewDidLoad() {
@@ -46,12 +48,24 @@ final class SettingsViewController: NSViewController {
         setupScrollView(letterScrollView, textView: letterTextView)
         view.addSubview(letterScrollView)
 
+        letterCICheckbox.translatesAutoresizingMaskIntoConstraints = false
+        letterCICheckbox.target = self
+        letterCICheckbox.action = #selector(letterCIChanged)
+        letterCICheckbox.state = SettingsStore.shared.isLetterCaseInsensitive ? .on : .off
+        view.addSubview(letterCICheckbox)
+
         // Word section
         wordLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(wordLabel)
 
         setupScrollView(wordScrollView, textView: wordTextView)
         view.addSubview(wordScrollView)
+
+        wordCICheckbox.translatesAutoresizingMaskIntoConstraints = false
+        wordCICheckbox.target = self
+        wordCICheckbox.action = #selector(wordCIChanged)
+        wordCICheckbox.state = SettingsStore.shared.isWordCaseInsensitive ? .on : .off
+        view.addSubview(wordCICheckbox)
 
         // Buttons
         importButton.bezelStyle = .rounded
@@ -84,10 +98,14 @@ final class SettingsViewController: NSViewController {
             letterScrollView.topAnchor.constraint(equalTo: letterLabel.bottomAnchor, constant: 6),
             letterScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             letterScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            letterScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.3),
+            letterScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.27),
+
+            // Letter CI checkbox
+            letterCICheckbox.topAnchor.constraint(equalTo: letterScrollView.bottomAnchor, constant: 6),
+            letterCICheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
 
             // Word label
-            wordLabel.topAnchor.constraint(equalTo: letterScrollView.bottomAnchor, constant: 16),
+            wordLabel.topAnchor.constraint(equalTo: letterCICheckbox.bottomAnchor, constant: 14),
             wordLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             wordLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
 
@@ -95,18 +113,22 @@ final class SettingsViewController: NSViewController {
             wordScrollView.topAnchor.constraint(equalTo: wordLabel.bottomAnchor, constant: 6),
             wordScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             wordScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            wordScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.3),
+            wordScrollView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.27),
+
+            // Word CI checkbox
+            wordCICheckbox.topAnchor.constraint(equalTo: wordScrollView.bottomAnchor, constant: 6),
+            wordCICheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
 
             // Import button
-            importButton.topAnchor.constraint(equalTo: wordScrollView.bottomAnchor, constant: 12),
+            importButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
             importButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
 
             // Export button
-            exportButton.topAnchor.constraint(equalTo: wordScrollView.bottomAnchor, constant: 12),
+            exportButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
             exportButton.leadingAnchor.constraint(equalTo: importButton.trailingAnchor, constant: 8),
 
             // Save button
-            saveButton.topAnchor.constraint(equalTo: wordScrollView.bottomAnchor, constant: 12),
+            saveButton.topAnchor.constraint(equalTo: wordCICheckbox.bottomAnchor, constant: 14),
             saveButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             saveButton.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -16),
         ])
@@ -150,6 +172,16 @@ final class SettingsViewController: NSViewController {
     }
 
     // MARK: - Actions
+
+    @objc private func letterCIChanged(_ sender: NSButton) {
+        SettingsStore.shared.isLetterCaseInsensitive = sender.state == .on
+        log.info("Letter CI: \(sender.state == .on)")
+    }
+
+    @objc private func wordCIChanged(_ sender: NSButton) {
+        SettingsStore.shared.isWordCaseInsensitive = sender.state == .on
+        log.info("Word CI: \(sender.state == .on)")
+    }
 
     @objc private func saveRules() {
         let letterRules = parseText(letterTextView.string)

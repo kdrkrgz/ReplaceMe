@@ -150,6 +150,19 @@ actor DictionaryStore {
     }
 
     private func updateSnapshot() {
-        snapshotHolder.value = DictionarySnapshot(letterRules: letterRules, wordRules: wordRules)
+        let ciLetter = Dictionary(
+            letterRules.map { (key: $0.key.lowercased(), value: $0.value) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let ciWord = Dictionary(
+            wordRules.map { (key: $0.key.lowercased(), value: $0.value) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        snapshotHolder.value = DictionarySnapshot(
+            letterRules: letterRules,
+            wordRules: wordRules,
+            ciLetterRules: ciLetter,
+            ciWordRules: ciWord
+        )
     }
 }

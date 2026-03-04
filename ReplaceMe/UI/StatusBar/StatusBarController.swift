@@ -48,17 +48,31 @@ final class StatusBarController: NSObject {
 
         menu.addItem(.separator())
 
+        // Letter Replace checkbox
+        let letterItem = NSMenuItem(title: "Letter Replace Active", action: #selector(toggleLetterReplace), keyEquivalent: "")
+        letterItem.target = self
+        letterItem.tag = 102
+        menu.addItem(letterItem)
+
+        // Letter Replace CI checkbox (indented title ile görsel ayrım)
+        let letterCIItem = NSMenuItem(title: "  ↳ Case Insensitive", action: #selector(toggleLetterCI), keyEquivalent: "")
+        letterCIItem.target = self
+        letterCIItem.tag = 103
+        menu.addItem(letterCIItem)
+
+        menu.addItem(.separator())
+
         // Word Replace checkbox
         let wordItem = NSMenuItem(title: "Word Replace Active", action: #selector(toggleWordReplace), keyEquivalent: "")
         wordItem.target = self
         wordItem.tag = 101
         menu.addItem(wordItem)
 
-        // Letter Replace checkbox
-        let letterItem = NSMenuItem(title: "Letter Replace Active", action: #selector(toggleLetterReplace), keyEquivalent: "")
-        letterItem.target = self
-        letterItem.tag = 102
-        menu.addItem(letterItem)
+        // Word Replace CI checkbox
+        let wordCIItem = NSMenuItem(title: "  ↳ Case Insensitive", action: #selector(toggleWordCI), keyEquivalent: "")
+        wordCIItem.target = self
+        wordCIItem.tag = 104
+        menu.addItem(wordCIItem)
 
         menu.addItem(.separator())
 
@@ -112,6 +126,16 @@ final class StatusBarController: NSObject {
         updateMenuState()
     }
 
+    @objc private func toggleLetterCI() {
+        settings.isLetterCaseInsensitive.toggle()
+        updateMenuState()
+    }
+
+    @objc private func toggleWordCI() {
+        settings.isWordCaseInsensitive.toggle()
+        updateMenuState()
+    }
+
     @objc private func openSettings() {
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController()
@@ -133,11 +157,18 @@ final class StatusBarController: NSObject {
         if let activeItem = menu.item(withTag: 100) {
             activeItem.state = settings.isGlobalActive ? .on : .off
         }
+        if let letterItem = menu.item(withTag: 102) {
+            letterItem.state = settings.isLetterReplaceActive ? .on : .off
+        }
+        if let letterCIItem = menu.item(withTag: 103) {
+            letterCIItem.state = settings.isLetterCaseInsensitive ? .on : .off
+            // CI checkbox sadece letter replace aktifken anlamlı — grayed out değil, bilgi amaçlı
+        }
         if let wordItem = menu.item(withTag: 101) {
             wordItem.state = settings.isWordReplaceActive ? .on : .off
         }
-        if let letterItem = menu.item(withTag: 102) {
-            letterItem.state = settings.isLetterReplaceActive ? .on : .off
+        if let wordCIItem = menu.item(withTag: 104) {
+            wordCIItem.state = settings.isWordCaseInsensitive ? .on : .off
         }
     }
 }

@@ -30,9 +30,11 @@ private final class SynchronousReplaceState {
 
     func process(character: Character, keyCode: Int64) -> ReplaceAction {
         lock.withLock {
-            let snapshot    = DictionaryStore.shared.cachedSnapshot
+            let snapshot     = DictionaryStore.shared.cachedSnapshot
             let letterActive = SettingsStore.shared.isLetterReplaceActiveCached
             let wordActive   = SettingsStore.shared.isWordReplaceActiveCached
+            let letterCI     = SettingsStore.shared.isLetterCaseInsensitiveCached
+            let wordCI       = SettingsStore.shared.isWordCaseInsensitiveCached
 
             // Escape → temizle
             if keyCode == KeyCode.escape {
@@ -46,18 +48,39 @@ private final class SynchronousReplaceState {
                 return .passthrough
             }
 
-            // Letter replace (öncelikli)
-            if letterActive,
-               let replacement = snapshot.letterRules[String(character)] {
-                return .replaceCharacter(replacement)
+            // Letter replace
+            if letterActive {
+                let charStr = String(character)
+                if letterCI {
+                    // Case-insensitive: lowercase key ile bak, ardından case uygula
+                    let key = charStr.lowercased()
+                    if let raw = snapshot.ciLetterRules[key] {
+                        let replacement = CaseMapper.applyCase(of: character, to: raw)
+                        return .replaceCharacter(replacement)
+                    }
+                } else {
+                    if let replacement = snapshot.letterRules[charStr] {
+                        return .replaceCharacter(replacement)
+                    }
+                }
             }
 
             // Word replace
             if wordActive {
                 if isWordTerminator(character: character, keyCode: keyCode) {
                     let word = buffer.flush()
-                    if !word.isEmpty, let replacement = snapshot.wordRules[word] {
-                        return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                    if !word.isEmpty {
+                        if wordCI {
+                            let key = word.lowercased()
+                            if let raw = snapshot.ciWordRules[key] {
+                                let replacement = CaseMapper.applyCase(of: word, to: raw)
+                                return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                            }
+                        } else {
+                            if let replacement = snapshot.wordRules[word] {
+                                return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                            }
+                        }
                     }
                     return .passthrough
                 } else {
@@ -97,9 +120,11 @@ actor ReplaceEngine {
     // MARK: - Public API (async — actor context, unit test için)
 
     func process(character: Character, keyCode: Int64) -> ReplaceAction {
-        let snapshot    = dictionary.cachedSnapshot
+        let snapshot     = dictionary.cachedSnapshot
         let letterActive = settings.isLetterReplaceActiveCached
         let wordActive   = settings.isWordReplaceActiveCached
+        let letterCI     = settings.isLetterCaseInsensitiveCached
+        let wordCI       = settings.isWordCaseInsensitiveCached
 
         if keyCode == KeyCode.escape {
             wordBuffer.clear()
@@ -109,14 +134,35 @@ actor ReplaceEngine {
             wordBuffer.deleteLastCharacter()
             return .passthrough
         }
-        if letterActive, let replacement = snapshot.letterRules[String(character)] {
-            return .replaceCharacter(replacement)
+
+        if letterActive {
+            let charStr = String(character)
+            if letterCI {
+                let key = charStr.lowercased()
+                if let raw = snapshot.ciLetterRules[key] {
+                    return .replaceCharacter(CaseMapper.applyCase(of: character, to: raw))
+                }
+            } else {
+                if let replacement = snapshot.letterRules[charStr] {
+                    return .replaceCharacter(replacement)
+                }
+            }
         }
+
         if wordActive {
             if isWordTerminator(character: character, keyCode: keyCode) {
                 let word = wordBuffer.flush()
-                if !word.isEmpty, let replacement = snapshot.wordRules[word] {
-                    return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                if !word.isEmpty {
+                    if wordCI {
+                        let key = word.lowercased()
+                        if let raw = snapshot.ciWordRules[key] {
+                            return .replaceWord(deleteCount: word.count, insert: CaseMapper.applyCase(of: word, to: raw), terminator: character)
+                        }
+                    } else {
+                        if let replacement = snapshot.wordRules[word] {
+                            return .replaceWord(deleteCount: word.count, insert: replacement, terminator: character)
+                        }
+                    }
                 }
                 return .passthrough
             } else {

@@ -14,8 +14,13 @@ struct DictionaryData: Codable {
 
 /// Thread-safe read-only snapshot — CGEventTap callback'inde kullanılır.
 struct DictionarySnapshot {
-    let letterRules: [String: String]  // from → to
-    let wordRules: [String: String]    // from → to
+    let letterRules: [String: String]    // from → to (exact)
+    let wordRules: [String: String]      // from → to (exact)
+    let ciLetterRules: [String: String]  // lowercased(from) → to (case-insensitive lookup için)
+    let ciWordRules: [String: String]    // lowercased(from) → to (case-insensitive lookup için)
 
-    static let empty = DictionarySnapshot(letterRules: [:], wordRules: [:])
+    static let empty = DictionarySnapshot(
+        letterRules: [:], wordRules: [:],
+        ciLetterRules: [:], ciWordRules: [:]
+    )
 }
