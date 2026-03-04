@@ -4,8 +4,6 @@ import AppKit
 import OSLog
 
 private let log = Logger(subsystem: "com.kadirkaragoz.ReplaceMe", category: "AppDelegate")
-
-@main
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusBarController: StatusBarController?
