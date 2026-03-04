@@ -31,6 +31,26 @@ final class InputManager {
 
     private init() {}
 
+    /// Engine'e hiç ulaşmaması gereken keycodes — ok tuşları, F-tuşları, medya tuşları, vb.
+    /// Sayı tuşları (18-29) ve Escape (53) engine içinde karakter tipine göre zaten filtrelenir,
+    /// ancak açıkça burada da belirtmek defense-in-depth sağlar.
+    private static let bypassKeyCodes: Set<Int64> = [
+        // Arrow keys
+        123, 124, 125, 126,
+        // Home, End, Page Up, Page Down
+        115, 119, 116, 121,
+        // F1–F12
+        122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111,
+        // F13–F20
+        105, 107, 113, 106, 64, 79, 80, 90,
+        // Help / Insert
+        114,
+        // Forward Delete
+        117,
+        // Num Lock / Clear
+        71,
+    ]
+
     // MARK: - Public API
 
     func start() throws {
@@ -154,13 +174,18 @@ final class InputManager {
             return Unmanaged.passRetained(event)
         }
 
-        // 5. Karakteri extract et
+        // 5. Non-processable keycode'lar → engine'e hiç gitme (ok tuşları, F-tuşları, vb.)
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        if InputManager.bypassKeyCodes.contains(keyCode) {
+            return Unmanaged.passRetained(event)
+        }
+
+        // 6. Karakteri extract et
         guard let character = event.rmCharacter else {
             return Unmanaged.passRetained(event)
         }
 
-        // 6. ReplaceEngine'den senkron action al (cached snapshot — async yok)
+        // 7. ReplaceEngine'den senkron action al (cached snapshot — async yok)
         let action = engine.processSynchronous(character: character, keyCode: keyCode)
 
         switch action {

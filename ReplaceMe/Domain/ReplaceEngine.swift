@@ -48,6 +48,13 @@ private final class SynchronousReplaceState {
                 return .passthrough
             }
 
+            // Digit veya non-letter non-terminator → kelime bağlamını kır, temizle
+            let isTerminator = isWordTerminator(character: character, keyCode: keyCode)
+            if !character.isLetter && !isTerminator {
+                buffer.clear()
+                return .passthrough
+            }
+
             // Letter replace
             if letterActive {
                 let charStr = String(character)
@@ -67,7 +74,7 @@ private final class SynchronousReplaceState {
 
             // Word replace
             if wordActive {
-                if isWordTerminator(character: character, keyCode: keyCode) {
+                if isTerminator {
                     let word = buffer.flush()
                     if !word.isEmpty {
                         if wordCI {
@@ -135,6 +142,13 @@ actor ReplaceEngine {
             return .passthrough
         }
 
+        // Digit veya non-letter non-terminator → kelime bağlamını kır, temizle
+        let isTerminator = isWordTerminator(character: character, keyCode: keyCode)
+        if !character.isLetter && !isTerminator {
+            wordBuffer.clear()
+            return .passthrough
+        }
+
         if letterActive {
             let charStr = String(character)
             if letterCI {
@@ -150,7 +164,7 @@ actor ReplaceEngine {
         }
 
         if wordActive {
-            if isWordTerminator(character: character, keyCode: keyCode) {
+            if isTerminator {
                 let word = wordBuffer.flush()
                 if !word.isEmpty {
                     if wordCI {
