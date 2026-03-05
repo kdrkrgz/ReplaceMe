@@ -1,4 +1,4 @@
-brb,be right back
+brb,sonra
 omw
-ttyl,talk to you later
-imo,in my opinion
+ttyl,gorusuruz
+imo,bence

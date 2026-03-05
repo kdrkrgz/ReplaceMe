@@ -172,6 +172,7 @@ enum URLImportService {
             String($0).trimmingCharacters(in: .whitespaces)
         }
         return parts.count == 2 && !parts[0].isEmpty && !parts[1].isEmpty
+            && !parts[0].contains(" ") && !parts[1].contains(" ")
     }
 
     // MARK: - Line Validation
@@ -218,6 +219,20 @@ enum URLImportService {
             return LineValidation(
                 lineNumber: lineNumber, raw: line,
                 error: "Satır \(lineNumber): 'to' alanı boş — ',\(line.split(separator: ",").last ?? "")'"
+            )
+        }
+
+        if from.contains(" ") {
+            return LineValidation(
+                lineNumber: lineNumber, raw: line,
+                error: "Satır \(lineNumber): 'from' alanı birden fazla kelime içeriyor — '\(from)'"
+            )
+        }
+
+        if to.contains(" ") {
+            return LineValidation(
+                lineNumber: lineNumber, raw: line,
+                error: "Satır \(lineNumber): 'to' alanı birden fazla kelime içeriyor — '\(to)'"
             )
         }
 

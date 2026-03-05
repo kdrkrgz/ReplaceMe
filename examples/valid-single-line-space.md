@@ -1,1 +1,1 @@
-brb,be right back omw,on my way ttyl,talk to you later lmk,let me know
+brb,sonra omw,geliyorum ttyl,gorusuruz lmk,bildir

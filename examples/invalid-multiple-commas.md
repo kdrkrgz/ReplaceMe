@@ -1,4 +1,4 @@
-brb,be right back
+brb,sonra
 tsk,tesekkurler,ok,tamam
-omw,on my way
+omw,geliyorum
 a,b,c,d

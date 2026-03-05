@@ -757,6 +757,8 @@ final class SettingsViewController: NSViewController {
         // Trimlenmiş olmalı (başında/sonunda boşluk olmamalı)
         guard from == from.trimmingCharacters(in: .whitespaces),
               to == to.trimmingCharacters(in: .whitespaces) else { return false }
+        // Tek kelime olmalı (boşluk içermemeli)
+        guard !from.contains(" "), !to.contains(" ") else { return false }
         return true
     }
 

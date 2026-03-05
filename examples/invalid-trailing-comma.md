@@ -1,5 +1,5 @@
-brb,be right back
+brb,sonra
 tsk,tesekkurler,
-omw,on my way
-,sadece to
-btw,by the way
+omw,geliyorum
+,sadece_to
+btw,bu_arada

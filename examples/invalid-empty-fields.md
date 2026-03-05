@@ -1,4 +1,4 @@
 brb,
-,on my way
+,geliyorum
 ,
 tsk,tesekkurler
