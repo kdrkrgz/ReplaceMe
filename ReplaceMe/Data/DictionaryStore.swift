@@ -27,6 +27,7 @@ actor DictionaryStore {
 
     private var letterRules: [String: String] = [:]
     private var wordRules: [String: String] = [:]
+    private var urlSources: [URLSource] = []
 
     /// Thread-safe snapshot — CGEventTap callback'ten okunabilir (nonisolated, lock-protected).
     private nonisolated let snapshotHolder = SnapshotHolder()
@@ -54,9 +55,11 @@ actor DictionaryStore {
             return
         }
         let data = try Data(contentsOf: url)
-        let decoded = try JSONDecoder().decode(DictionaryData.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(DictionaryData.self, from: data)
         applyData(decoded)
-        log.info("Loaded \(self.letterRules.count) letter rules, \(self.wordRules.count) word rules")
+        log.info("Loaded \(self.letterRules.count) letter rules, \(self.wordRules.count) word rules, \(self.urlSources.count) URL sources")
     }
 
     func save() throws {
@@ -67,8 +70,11 @@ actor DictionaryStore {
         var data = DictionaryData()
         data.letterRules = letterRules.map { DictionaryData.RuleEntry(from: $0.key, to: $0.value) }
         data.wordRules   = wordRules.map   { DictionaryData.RuleEntry(from: $0.key, to: $0.value) }
+        data.urlSources  = urlSources
 
-        let encoded = try JSONEncoder().encode(data)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let encoded = try encoder.encode(data)
         // Atomic write — dosya bozulmasını önler
         try encoded.write(to: url, options: .atomic)
         log.debug("Saved dictionaries to disk")
@@ -140,12 +146,33 @@ actor DictionaryStore {
 
     func allLetterRules() -> [String: String] { letterRules }
     func allWordRules() -> [String: String] { wordRules }
+    func allURLSources() -> [URLSource] { urlSources }
+
+    // MARK: - URL Source CRUD
+
+    func addURLSource(_ source: URLSource) {
+        guard !urlSources.contains(where: { $0.url == source.url }) else { return }
+        urlSources.append(source)
+        scheduleSave()
+    }
+
+    func removeURLSource(id: String) {
+        urlSources.removeAll { $0.id == id }
+        scheduleSave()
+    }
+
+    func updateURLSource(_ source: URLSource) {
+        guard let index = urlSources.firstIndex(where: { $0.id == source.id }) else { return }
+        urlSources[index] = source
+        scheduleSave()
+    }
 
     // MARK: - Private
 
     private func applyData(_ data: DictionaryData) {
         letterRules = Dictionary(uniqueKeysWithValues: data.letterRules.map { ($0.from, $0.to) })
         wordRules   = Dictionary(uniqueKeysWithValues: data.wordRules.map   { ($0.from, $0.to) })
+        urlSources  = data.urlSources
         updateSnapshot()
     }
 
