@@ -39,13 +39,57 @@ codesign --force --deep --sign "$SIGN_IDENTITY" \
 echo "=== App bulundu: $APP_PATH ==="
 
 DMG_NAME="$APP_NAME.dmg"
-echo "=== DMG olusturuluyor: $DMG_NAME ==="
+DMG_TEMP="$BUILD_DIR/dmg_temp"
+DMG_RW="$BUILD_DIR/${APP_NAME}_rw.dmg"
 
+echo "=== DMG icerigi hazirlaniyor ==="
+rm -rf "$DMG_TEMP"
+mkdir -p "$DMG_TEMP"
+cp -R "$APP_PATH" "$DMG_TEMP/"
+ln -s /Applications "$DMG_TEMP/Applications"
+
+echo "=== Yazilabilir DMG olusturuluyor ==="
+rm -f "$DMG_RW"
 hdiutil create \
   -volname "$APP_NAME" \
-  -srcfolder "$APP_PATH" \
+  -srcfolder "$DMG_TEMP" \
   -ov \
-  -format UDZO \
-  "$DMG_NAME"
+  -format UDRW \
+  "$DMG_RW"
+
+echo "=== DMG pencere ayarlari yapiliyor ==="
+MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_RW" | grep "/Volumes/" | sed 's/.*\/Volumes/\/Volumes/')
+
+osascript <<EOF
+tell application "Finder"
+  tell disk "$APP_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set bounds of container window to {200, 200, 660, 440}
+    set theViewOptions to icon view options of container window
+    set arrangement of theViewOptions to not arranged
+    set icon size of theViewOptions to 80
+    set position of item "$APP_NAME.app" of container window to {100, 120}
+    set position of item "Applications" of container window to {350, 120}
+    close
+    open
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+EOF
+
+sync
+hdiutil detach "$MOUNT_DIR" -quiet
+
+echo "=== Sıkistırılmıs DMG olusturuluyor: $DMG_NAME ==="
+rm -f "$DMG_NAME"
+hdiutil convert "$DMG_RW" -format UDZO -o "$DMG_NAME"
+
+rm -f "$DMG_RW"
+rm -rf "$DMG_TEMP"
 
 echo "=== Tamamlandi: $DMG_NAME ==="
