@@ -64,10 +64,12 @@ hdiutil create \
 echo "=== DMG pencere ayarlari yapiliyor ==="
 MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$DMG_RW" | grep "/Volumes/" | sed 's/.*\/Volumes/\/Volumes/')
 
+# Finder'in pencere ayarlarini uygula
 osascript <<EOF
 tell application "Finder"
   tell disk "$APP_NAME"
     open
+    delay 2
     set current view of container window to icon view
     set toolbar visible of container window to false
     set statusbar visible of container window to false
@@ -75,8 +77,9 @@ tell application "Finder"
     set theViewOptions to icon view options of container window
     set arrangement of theViewOptions to not arranged
     set icon size of theViewOptions to 80
+    delay 1
     set position of item "$APP_NAME.app" of container window to {100, 120}
-    set position of item "Applications" of container window to {350, 120}
+    delay 1
     close
     open
     update without registering applications
@@ -95,5 +98,7 @@ hdiutil convert "$DMG_RW" -format UDZO -o "$DMG_NAME"
 
 rm -f "$DMG_RW"
 rm -rf "$DMG_TEMP"
+
+xattr -cr "$DMG_NAME"
 
 echo "=== Tamamlandi: $DMG_NAME ==="
