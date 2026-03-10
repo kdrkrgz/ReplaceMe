@@ -30,8 +30,12 @@ echo "=== Extended attributelar temizleniyor ==="
 xattr -cr "$APP_PATH"
 
 echo "=== App imzalaniyor ==="
-SIGN_IDENTITY="REDACTED_SIGN_IDENTITY"
-codesign --force --deep --sign "$SIGN_IDENTITY" \
+if [ -z "$CODESIGN_IDENTITY" ]; then
+  echo "ERROR: CODESIGN_IDENTITY ortam degiskeni tanimli degil."
+  echo "Ornek: export CODESIGN_IDENTITY=\"Apple Development: email@example.com (TEAM_ID)\""
+  exit 1
+fi
+codesign --force --deep --sign "$CODESIGN_IDENTITY" \
   --entitlements ReplaceMe.entitlements \
   --options runtime \
   "$APP_PATH"
